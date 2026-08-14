@@ -1,0 +1,9 @@
+{
+  "name": "quotekit-web",
+  "version": "0.1.0",
+  "private": true,
+  "description": "QuoteKit demo UI — plain static HTML, no build step",
+  "scripts": {
+    "build": "echo 'static site: nothing to build'"
+  }
+}
