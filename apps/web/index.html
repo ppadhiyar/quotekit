@@ -36,6 +36,8 @@
     <p class="sub">Describe the job. Every price is retrieved from your indexed price list — never invented — and gated by a groundedness check.</p>
 
     <textarea id="job" placeholder="e.g. Rebuild a 200 sq ft deck with pressure-treated lumber and two sets of stairs"></textarea>
+    <input id="code" type="password" placeholder="Access code (optional — without it you get sample demo data)"
+           style="width:100%;margin-top:.5rem;padding:.6rem .8rem;border-radius:10px;border:1px solid var(--border);background:var(--card);color:var(--text);font-size:.9rem;" />
     <button id="go">Generate quote</button>
 
     <div class="quote" id="result" hidden>
@@ -58,9 +60,12 @@
       if (job.length < 10) return alert("Add a bit more detail about the job.");
       btn.disabled = true; btn.textContent = "Retrieving + evaluating…";
       try {
+        const headers = { "Content-Type": "application/json" };
+        const code = document.getElementById("code").value.trim();
+        if (code) headers["X-Access-Code"] = code;
         const res = await fetch(API + "/quote", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers,
           body: JSON.stringify({ job_description: job }),
         });
         if (!res.ok) throw new Error(await res.text());
@@ -89,6 +94,7 @@
 
       document.getElementById("subtotal").textContent = "Subtotal: $" + q.subtotal.toFixed(2);
       document.getElementById("meta").textContent =
+        (q.mode === "demo" ? "Sample data (demo mode — enter an access code for live AI) · " : "") +
         `Groundedness: ${q.groundedness_score ?? "n/a"}` +
         (q.review_reasons.length ? " · Review reasons: " + q.review_reasons.join("; ") : "");
     }

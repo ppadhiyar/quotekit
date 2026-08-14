@@ -26,6 +26,11 @@ class QuoteStatus(str, Enum):
     NEEDS_REVIEW = "needs_review"  # below confidence threshold — human in the loop
 
 
+class ResponseMode(str, Enum):
+    LIVE = "live"  # real retrieval + LLM + eval gate
+    DEMO = "demo"  # canned response — no access code, budget exhausted, or DEMO_MODE
+
+
 class Quote(BaseModel):
     job_description: str
     line_items: list[LineItem]
@@ -33,6 +38,7 @@ class Quote(BaseModel):
     status: QuoteStatus
     groundedness_score: float | None = None
     review_reasons: list[str] = []
+    mode: ResponseMode = ResponseMode.LIVE
 
 
 class QuoteRequest(BaseModel):
@@ -49,6 +55,7 @@ class ChatResponse(BaseModel):
     citations: list[Citation]
     groundedness_score: float | None = None
     status: QuoteStatus
+    mode: ResponseMode = ResponseMode.LIVE
 
 
 class IngestResult(BaseModel):

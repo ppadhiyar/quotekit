@@ -140,8 +140,8 @@ def get_graph():
 # --- Public entry points ---------------------------------------------------
 
 
-def run_quote(job_description: str) -> Quote:
-    if get_settings().demo_mode:
+def run_quote(job_description: str, live: bool = True) -> Quote:
+    if get_settings().demo_mode or not live:
         return demo_cache.demo_quote(job_description)
 
     state = get_graph().invoke({"query": job_description, "mode": "quote"})
@@ -176,8 +176,8 @@ def run_quote(job_description: str) -> Quote:
     )
 
 
-def run_chat(question: str) -> dict:
-    if get_settings().demo_mode:
+def run_chat(question: str, live: bool = True) -> dict:
+    if get_settings().demo_mode or not live:
         return demo_cache.demo_chat(question)
 
     state = get_graph().invoke({"query": question, "mode": "chat"})

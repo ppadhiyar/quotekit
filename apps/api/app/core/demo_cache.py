@@ -5,7 +5,7 @@ index, no LLM calls. The shapes are identical to live responses, so the
 frontend can't tell the difference.
 """
 
-from ..schemas import Citation, LineItem, Quote, QuoteStatus
+from ..schemas import Citation, LineItem, Quote, QuoteStatus, ResponseMode
 
 _DEMO_DOC = "acme_contracting_price_list_2026.csv"
 
@@ -59,6 +59,7 @@ def demo_quote(job_description: str) -> Quote:
         status=QuoteStatus.APPROVED,
         groundedness_score=0.88,
         review_reasons=[],
+        mode=ResponseMode.DEMO,
     )
 
 
@@ -78,4 +79,5 @@ def demo_chat(question: str) -> dict:
         ],
         "groundedness_score": 0.9,
         "status": QuoteStatus.APPROVED,
+        "mode": ResponseMode.DEMO,
     }

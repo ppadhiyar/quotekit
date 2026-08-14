@@ -7,6 +7,12 @@
     },
     "location": {
       "value": "${AZURE_LOCATION}"
+    },
+    "accessCode": {
+      "value": "${ACCESS_CODE}"
+    },
+    "adminApiKey": {
+      "value": "${ADMIN_API_KEY}"
     }
   }
 }

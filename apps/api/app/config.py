@@ -28,6 +28,12 @@ class Settings(BaseSettings):
     max_tokens_per_session: int = 8000
     rate_limit_per_minute: int = 10
 
+    # Access control: public traffic gets canned demo responses; live LLM
+    # calls require the access code, capped per day. Uploads need the admin key.
+    access_code: str = ""
+    admin_api_key: str = ""
+    llm_daily_request_limit: int = 100
+
 
 @lru_cache
 def get_settings() -> Settings:

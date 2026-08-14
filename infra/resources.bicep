@@ -8,6 +8,12 @@ param location string
 param openAiLocation string
 param envName string
 
+@secure()
+param accessCode string
+
+@secure()
+param adminApiKey string
+
 var suffix = uniqueString(resourceGroup().id)
 
 // --- Azure AI Search (FREE tier: 50 MB, 3 indexes) -------------------------
@@ -141,6 +147,14 @@ resource containerApp 'Microsoft.App/containerApps@2024-03-01' = {
           name: 'search-key'
           value: search.listAdminKeys().primaryKey
         }
+        {
+          name: 'access-code'
+          value: accessCode
+        }
+        {
+          name: 'admin-key'
+          value: adminApiKey
+        }
       ]
     }
     template: {
@@ -164,6 +178,10 @@ resource containerApp 'Microsoft.App/containerApps@2024-03-01' = {
             { name: 'AZURE_SEARCH_ENDPOINT', value: 'https://${search.name}.search.windows.net' }
             { name: 'AZURE_SEARCH_API_KEY', secretRef: 'search-key' }
             { name: 'AZURE_SEARCH_INDEX', value: 'quotekit-items' }
+            { name: 'ACCESS_CODE', secretRef: 'access-code' }
+            { name: 'ADMIN_API_KEY', secretRef: 'admin-key' }
+            { name: 'LLM_DAILY_REQUEST_LIMIT', value: '100' }
+            { name: 'DEMO_MODE', value: 'false' }
           ]
         }
       ]
