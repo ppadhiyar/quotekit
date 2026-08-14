@@ -17,6 +17,11 @@
     textarea { width: 100%; min-height: 90px; padding: .8rem; border-radius: 10px; border: 1px solid var(--border); background: var(--card); color: var(--text); font-size: 1rem; resize: vertical; }
     button { margin-top: .75rem; padding: .7rem 1.6rem; border: 0; border-radius: 10px; background: var(--accent); color: #fff; font-size: 1rem; font-weight: 600; cursor: pointer; }
     button:disabled { opacity: .5; cursor: wait; }
+    .chips { display: flex; flex-wrap: wrap; gap: .5rem; margin-bottom: .75rem; }
+    .chip { padding: .45rem .9rem; border-radius: 999px; border: 1px solid var(--border); background: var(--card); color: var(--text); font-size: .85rem; cursor: pointer; transition: border-color .15s, background .15s; }
+    .chip:hover { border-color: var(--accent); background: rgba(79,142,247,.12); }
+    .chip:disabled { opacity: .5; cursor: wait; }
+    .chips-label { width: 100%; color: var(--muted); font-size: .8rem; margin-bottom: .1rem; }
     .quote { margin-top: 2rem; }
     .badge { display: inline-block; padding: .2rem .7rem; border-radius: 999px; font-size: .8rem; font-weight: 600; }
     .badge.approved { background: rgba(52,201,142,.15); color: var(--ok); }
@@ -35,7 +40,10 @@
     <h1>QuoteKit</h1>
     <p class="sub">Describe the job. Every price is retrieved from your indexed price list — never invented — and gated by a groundedness check.</p>
 
-    <textarea id="job" placeholder="e.g. Rebuild a 200 sq ft deck with pressure-treated lumber and two sets of stairs"></textarea>
+    <div class="chips" id="chips">
+      <span class="chips-label">Try one:</span>
+    </div>
+    <textarea id="job" placeholder="Describe the job in your own words…"></textarea>
     <input id="code" type="password" placeholder="Access code (optional — without it you get sample demo data)"
            style="width:100%;margin-top:.5rem;padding:.6rem .8rem;border-radius:10px;border:1px solid var(--border);background:var(--card);color:var(--text);font-size:.9rem;" />
     <button id="go">Generate quote</button>
@@ -59,10 +67,34 @@
     );
     const btn = document.getElementById("go");
 
-    btn.addEventListener("click", async () => {
+    const SUGGESTIONS = [
+      "Rebuild a 200 sq ft deck with pressure-treated lumber and two sets of stairs",
+      "Install 40 linear ft of cedar fence, 6 ft tall, with one gate",
+      "Paint two bedrooms, walls and ceiling, about 400 sq ft total",
+      "Replace 3 interior doors including handles",
+      "Hang and finish drywall in a 300 sq ft basement room with baseboard trim",
+    ];
+    const chipsEl = document.getElementById("chips");
+    SUGGESTIONS.forEach(text => {
+      const chip = document.createElement("button");
+      chip.className = "chip";
+      chip.type = "button";
+      chip.textContent = text.length > 52 ? text.slice(0, 50) + "…" : text;
+      chip.title = text;
+      chip.addEventListener("click", () => {
+        document.getElementById("job").value = text;
+        generate();
+      });
+      chipsEl.appendChild(chip);
+    });
+
+    btn.addEventListener("click", generate);
+
+    async function generate() {
       const job = document.getElementById("job").value.trim();
       if (job.length < 10) return alert("Add a bit more detail about the job.");
       btn.disabled = true; btn.textContent = "Retrieving + evaluating…";
+      document.querySelectorAll(".chip").forEach(c => c.disabled = true);
       try {
         const headers = { "Content-Type": "application/json" };
         const code = document.getElementById("code").value.trim();
@@ -78,8 +110,9 @@
         alert("Request failed: " + e.message);
       } finally {
         btn.disabled = false; btn.textContent = "Generate quote";
+        document.querySelectorAll(".chip").forEach(c => c.disabled = false);
       }
-    });
+    }
 
     function render(q) {
       const el = document.getElementById("result");
