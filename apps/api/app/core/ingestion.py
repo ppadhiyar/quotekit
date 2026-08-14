@@ -137,11 +137,13 @@ def _chunks_via_pypdf(filename: str, raw: bytes) -> tuple[list[dict], list[str]]
         for line in text.splitlines():
             line = line.strip()
             if len(line) > 15 and re.search(r"\d", line):
+                # document stays the bare filename so replace-on-reupload can
+                # match every chunk; the page marker lives in the content.
                 chunks.append(
                     {
                         "chunk_id": str(uuid4()),
-                        "document": f"{filename}#page{page_num}",
-                        "content": line,
+                        "document": filename,
+                        "content": f"[page {page_num}] {line}",
                         "item_name": None,
                         "unit": None,
                         "unit_price": None,

@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="robots" content="noindex" />
+  <title>QuoteKit — Admin</title>
+  <style>
+    :root {
+      --bg: #0f1420; --card: #1a2233; --text: #e8ecf4; --muted: #93a0b8;
+      --accent: #4f8ef7; --ok: #34c98e; --warn: #f5a623; --border: #2a3550;
+    }
+    :root[data-theme="light"] {
+      --bg: #f4f6fb; --card: #ffffff; --text: #1a2233; --muted: #5a6a85;
+      --accent: #2f6fe4; --ok: #178a5e; --warn: #b26a00; --border: #d8e0ee;
+    }
+    * { box-sizing: border-box; margin: 0; }
+    body { font-family: -apple-system, "Segoe UI", sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; padding: 2rem 1rem; transition: background .2s, color .2s; }
+    #theme { position: fixed; top: 14px; right: 14px; width: 40px; height: 40px; border-radius: 50%; border: 1px solid var(--border); background: var(--card); font-size: 18px; cursor: pointer; z-index: 10; }
+    main { max-width: 560px; margin: 0 auto; }
+    h1 { font-size: 1.4rem; margin-bottom: .25rem; }
+    .sub { color: var(--muted); margin-bottom: 2rem; font-size: .95rem; }
+    label { display: block; color: var(--muted); font-size: .85rem; margin: 1rem 0 .35rem; }
+    input[type="password"] { width: 100%; padding: .7rem .8rem; border-radius: 10px; border: 1px solid var(--border); background: var(--card); color: var(--text); font-size: .95rem; }
+    .drop { margin-top: .35rem; border: 2px dashed var(--border); border-radius: 12px; padding: 2rem 1rem; text-align: center; color: var(--muted); cursor: pointer; }
+    .drop.has-file { border-color: var(--accent); color: var(--text); }
+    button.upload { margin-top: 1.25rem; width: 100%; padding: .8rem; border: 0; border-radius: 10px; background: var(--accent); color: #fff; font-size: 1rem; font-weight: 600; cursor: pointer; }
+    button.upload:disabled { opacity: .5; cursor: wait; }
+    .result { margin-top: 1.5rem; padding: 1rem; border-radius: 10px; background: var(--card); border: 1px solid var(--border); font-size: .92rem; display: none; }
+    .result.ok { border-color: var(--ok); }
+    .result.err { border-color: var(--warn); }
+    .result p { margin: .25rem 0; }
+    .muted { color: var(--muted); }
+    a { color: var(--accent); }
+  </style>
+</head>
+<body>
+  <button id="theme" title="Toggle light/dark">☀️</button>
+  <main>
+    <h1>Admin — Price List Upload</h1>
+    <p class="sub">Upload a CSV or PDF price list. Re-uploading a file with the same name <strong>replaces</strong> its previous version in the index. <a href="index.html">← back to demo</a></p>
+
+    <label for="key">Admin key</label>
+    <input id="key" type="password" placeholder="X-Admin-Key" autocomplete="off" />
+
+    <label>Price list file (.csv or .pdf, max 5 MB)</label>
+    <div class="drop" id="drop">Click to choose a file<br /><span class="muted" id="fname"></span></div>
+    <input id="file" type="file" accept=".csv,.pdf" hidden />
+
+    <button class="upload" id="upload">Upload &amp; index</button>
+
+    <div class="result" id="result"></div>
+  </main>
+
+  <script>
+    const store = {
+      get(s, k) { try { return s.getItem(k); } catch { return null; } },
+      set(s, k, v) { try { s.setItem(k, v); } catch { /* ignore */ } },
+    };
+    const themeBtn = document.getElementById("theme");
+    function setTheme(t) {
+      document.documentElement.dataset.theme = t;
+      themeBtn.textContent = t === "light" ? "🌙" : "☀️";
+      store.set(localStorage, "qk-theme", t);
+    }
+    setTheme(store.get(localStorage, "qk-theme") ||
+      (matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark"));
+    themeBtn.addEventListener("click", () =>
+      setTheme(document.documentElement.dataset.theme === "light" ? "dark" : "light"));
+
+    const API = window.QUOTEKIT_API || (
+      ["localhost", "127.0.0.1", ""].includes(location.hostname)
+        ? "http://localhost:8000"
+        : "https://quotekit-api-gtpvdikyux43s.livelymeadow-6c9ebf07.eastus2.azurecontainerapps.io"
+    );
+
+    const drop = document.getElementById("drop");
+    const fileInput = document.getElementById("file");
+    const keyInput = document.getElementById("key");
+    const btn = document.getElementById("upload");
+    const result = document.getElementById("result");
+
+    // Convenience only — the key is kept in sessionStorage (cleared when the
+    // tab closes), never in localStorage.
+    keyInput.value = store.get(sessionStorage, "qk-admin-key") || "";
+
+    drop.addEventListener("click", () => fileInput.click());
+    fileInput.addEventListener("change", () => {
+      const f = fileInput.files[0];
+      drop.classList.toggle("has-file", !!f);
+      document.getElementById("fname").textContent = f ? `${f.name} (${(f.size / 1024).toFixed(0)} KB)` : "";
+    });
+
+    btn.addEventListener("click", async () => {
+      const key = keyInput.value.trim();
+      const f = fileInput.files[0];
+      if (!key) return alert("Enter the admin key.");
+      if (!f) return alert("Choose a .csv or .pdf file.");
+      store.set(sessionStorage, "qk-admin-key", key);
+
+      btn.disabled = true; btn.textContent = "Uploading + indexing…";
+      result.style.display = "none";
+      try {
+        const form = new FormData();
+        form.append("file", f);
+        const res = await fetch(API + "/ingest", {
+          method: "POST",
+          headers: { "X-Admin-Key": key },
+          body: form,
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.detail || JSON.stringify(data));
+        result.className = "result ok";
+        result.innerHTML = `
+          <p><strong>${data.document}</strong> indexed ✓</p>
+          <p>${data.chunks_indexed} chunks indexed${data.replaced_chunks ? ` · ${data.replaced_chunks} old chunks replaced` : " · new document"}</p>
+          ${data.warnings.length ? `<p class="muted">Warnings: ${data.warnings.join("; ")}</p>` : ""}`;
+      } catch (e) {
+        result.className = "result err";
+        result.textContent = "Upload failed: " + e.message;
+      } finally {
+        result.style.display = "block";
+        btn.disabled = false; btn.textContent = "Upload & index";
+      }
+    });
+  </script>
+</body>
+</html>

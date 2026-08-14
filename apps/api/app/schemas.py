@@ -61,4 +61,5 @@ class ChatResponse(BaseModel):
 class IngestResult(BaseModel):
     document: str
     chunks_indexed: int
+    replaced_chunks: int = 0  # stale chunks deleted before this upload
     warnings: list[str] = []

@@ -32,5 +32,8 @@ async def ingest(
         raise HTTPException(422, f"No indexable content found. Warnings: {warnings}")
 
     search.ensure_index()
+    replaced = search.delete_document_chunks(name)
     indexed = search.upsert_chunks(chunks)
-    return IngestResult(document=name, chunks_indexed=indexed, warnings=warnings)
+    return IngestResult(
+        document=name, chunks_indexed=indexed, replaced_chunks=replaced, warnings=warnings
+    )

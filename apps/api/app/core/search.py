@@ -76,6 +76,31 @@ def ensure_index() -> None:
     logger.info("Created index %s", s.azure_search_index)
 
 
+def delete_document_chunks(document: str) -> int:
+    """Remove every chunk previously indexed under this document name, so a
+    re-upload replaces the old version instead of appending duplicates that
+    could surface stale prices."""
+    s = get_settings()
+    client = SearchClient(
+        endpoint=s.azure_search_endpoint,
+        index_name=s.azure_search_index,
+        credential=_credential(),
+    )
+    escaped = document.replace("'", "''")
+    results = client.search(
+        search_text="*",
+        filter=f"document eq '{escaped}'",
+        select=["chunk_id"],
+        top=1000,
+    )
+    ids = [{"chunk_id": r["chunk_id"]} for r in results]
+    if not ids:
+        return 0
+    client.delete_documents(documents=ids)
+    logger.info("Deleted %d stale chunks for document %s", len(ids), document)
+    return len(ids)
+
+
 def upsert_chunks(chunks: list[dict]) -> int:
     """Embed and upload chunks. Each chunk: {chunk_id, document, content, item_name, unit, unit_price}."""
     s = get_settings()

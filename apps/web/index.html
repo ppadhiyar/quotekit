@@ -8,9 +8,16 @@
     :root {
       --bg: #0f1420; --card: #1a2233; --text: #e8ecf4; --muted: #93a0b8;
       --accent: #4f8ef7; --ok: #34c98e; --warn: #f5a623; --border: #2a3550;
+      --chip-hover: rgba(79,142,247,.12);
+    }
+    :root[data-theme="light"] {
+      --bg: #f4f6fb; --card: #ffffff; --text: #1a2233; --muted: #5a6a85;
+      --accent: #2f6fe4; --ok: #178a5e; --warn: #b26a00; --border: #d8e0ee;
+      --chip-hover: rgba(47,111,228,.08);
     }
     * { box-sizing: border-box; margin: 0; }
-    body { font-family: -apple-system, "Segoe UI", sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; padding: 2rem 1rem; }
+    body { font-family: -apple-system, "Segoe UI", sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; padding: 2rem 1rem; transition: background .2s, color .2s; }
+    #theme { position: fixed; top: 14px; right: 14px; width: 40px; height: 40px; border-radius: 50%; border: 1px solid var(--border); background: var(--card); font-size: 18px; cursor: pointer; z-index: 10; }
     main { max-width: 720px; margin: 0 auto; }
     h1 { font-size: 1.6rem; margin-bottom: .25rem; }
     .sub { color: var(--muted); margin-bottom: 2rem; }
@@ -19,13 +26,13 @@
     button:disabled { opacity: .5; cursor: wait; }
     .chips { display: flex; flex-wrap: wrap; gap: .5rem; margin-bottom: .75rem; }
     .chip { padding: .45rem .9rem; border-radius: 999px; border: 1px solid var(--border); background: var(--card); color: var(--text); font-size: .85rem; cursor: pointer; transition: border-color .15s, background .15s; }
-    .chip:hover { border-color: var(--accent); background: rgba(79,142,247,.12); }
+    .chip:hover { border-color: var(--accent); background: var(--chip-hover); }
     .chip:disabled { opacity: .5; cursor: wait; }
     .chips-label { width: 100%; color: var(--muted); font-size: .8rem; margin-bottom: .1rem; }
     .quote { margin-top: 2rem; }
     .badge { display: inline-block; padding: .2rem .7rem; border-radius: 999px; font-size: .8rem; font-weight: 600; }
-    .badge.approved { background: rgba(52,201,142,.15); color: var(--ok); }
-    .badge.needs_review { background: rgba(245,166,35,.15); color: var(--warn); }
+    .badge.approved { background: color-mix(in srgb, var(--ok) 15%, transparent); color: var(--ok); }
+    .badge.needs_review { background: color-mix(in srgb, var(--warn) 15%, transparent); color: var(--warn); }
     table { width: 100%; border-collapse: collapse; margin-top: 1rem; }
     th, td { text-align: left; padding: .6rem .5rem; border-bottom: 1px solid var(--border); font-size: .92rem; }
     th { color: var(--muted); font-weight: 500; }
@@ -36,6 +43,7 @@
   </style>
 </head>
 <body>
+  <button id="theme" title="Toggle light/dark">☀️</button>
   <main>
     <h1>QuoteKit</h1>
     <p class="sub">Describe the job. Every price is retrieved from your indexed price list — never invented — and gated by a groundedness check.</p>
@@ -60,6 +68,23 @@
   </main>
 
   <script>
+    // Theme: user choice persists; first visit follows the OS preference.
+    // Storage access is wrapped — some browsers/sandboxes throw on it.
+    const store = {
+      get(k) { try { return localStorage.getItem(k); } catch { return null; } },
+      set(k, v) { try { localStorage.setItem(k, v); } catch { /* ignore */ } },
+    };
+    const themeBtn = document.getElementById("theme");
+    function setTheme(t) {
+      document.documentElement.dataset.theme = t;
+      themeBtn.textContent = t === "light" ? "🌙" : "☀️";
+      store.set("qk-theme", t);
+    }
+    setTheme(store.get("qk-theme") ||
+      (matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark"));
+    themeBtn.addEventListener("click", () =>
+      setTheme(document.documentElement.dataset.theme === "light" ? "dark" : "light"));
+
     const API = window.QUOTEKIT_API || (
       ["localhost", "127.0.0.1", ""].includes(location.hostname)
         ? "http://localhost:8000"
