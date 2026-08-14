@@ -9,11 +9,20 @@ import csv
 import io
 import logging
 import re
-from uuid import uuid4
+from uuid import NAMESPACE_URL, uuid4, uuid5
 
 from ..config import get_settings
 
 logger = logging.getLogger(__name__)
+
+
+def assign_deterministic_ids(filename: str, chunks: list[dict]) -> list[dict]:
+    """Give chunks IDs derived from (document, position). Re-uploading a file
+    then overwrites its own chunks in place — immune to the eventual-consistency
+    window where delete-by-query can miss just-indexed chunks."""
+    for i, chunk in enumerate(chunks):
+        chunk["chunk_id"] = str(uuid5(NAMESPACE_URL, f"quotekit:{filename}:{i}"))
+    return chunks
 
 
 def chunks_from_csv(filename: str, raw: bytes) -> tuple[list[dict], list[str]]:

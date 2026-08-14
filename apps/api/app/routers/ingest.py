@@ -32,6 +32,10 @@ async def ingest(
         raise HTTPException(422, f"No indexable content found. Warnings: {warnings}")
 
     search.ensure_index()
+    # Delete-by-query clears chunks from older/longer versions of this file;
+    # deterministic IDs make the fresh upload overwrite rather than duplicate
+    # even when that query misses just-indexed chunks (eventual consistency).
+    ingestion.assign_deterministic_ids(name, chunks)
     replaced = search.delete_document_chunks(name)
     indexed = search.upsert_chunks(chunks)
     return IngestResult(
