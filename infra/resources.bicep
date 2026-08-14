@@ -192,7 +192,23 @@ resource containerApp 'Microsoft.App/containerApps@2024-03-01' = {
   }
 }
 
+// --- Static Web App (Free tier) for the demo UI -----------------------------
+resource staticSite 'Microsoft.Web/staticSites@2023-12-01' = {
+  name: '${baseName}-web-${suffix}'
+  location: location
+  tags: {
+    'azd-service-name': 'web'
+    'azd-env-name': envName
+  }
+  sku: {
+    name: 'Free'
+    tier: 'Free'
+  }
+  properties: {}
+}
+
 output containerRegistryEndpoint string = registry.properties.loginServer
+output webUrl string = 'https://${staticSite.properties.defaultHostname}'
 output apiUrl string = 'https://${containerApp.properties.configuration.ingress.fqdn}'
 output searchEndpoint string = 'https://${search.name}.search.windows.net'
 output openAiEndpoint string = openAi.properties.endpoint

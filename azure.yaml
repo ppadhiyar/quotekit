@@ -10,3 +10,8 @@ services:
     docker:
       path: ./Dockerfile
       remoteBuild: true
+  web:
+    project: ./apps/web
+    language: js
+    host: staticwebapp
+    dist: .

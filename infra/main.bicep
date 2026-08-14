@@ -92,5 +92,6 @@ resource budget 'Microsoft.Consumption/budgets@2023-11-01' = {
 
 output AZURE_CONTAINER_REGISTRY_ENDPOINT string = resources.outputs.containerRegistryEndpoint
 output API_URL string = resources.outputs.apiUrl
+output WEB_URL string = resources.outputs.webUrl
 output AZURE_SEARCH_ENDPOINT string = resources.outputs.searchEndpoint
 output AZURE_OPENAI_ENDPOINT string = resources.outputs.openAiEndpoint

@@ -52,7 +52,11 @@
   </main>
 
   <script>
-    const API = window.QUOTEKIT_API || "http://localhost:8000";
+    const API = window.QUOTEKIT_API || (
+      ["localhost", "127.0.0.1", ""].includes(location.hostname)
+        ? "http://localhost:8000"
+        : "https://quotekit-api-gtpvdikyux43s.livelymeadow-6c9ebf07.eastus2.azurecontainerapps.io"
+    );
     const btn = document.getElementById("go");
 
     btn.addEventListener("click", async () => {
