@@ -1,0 +1,14 @@
+{
+  "name": "@quotekit/widget",
+  "version": "0.1.0",
+  "description": "Embeddable grounded chat widget — one script tag per customer",
+  "type": "module",
+  "main": "dist/widget.js",
+  "scripts": {
+    "build": "esbuild src/widget.ts --bundle --minify --format=iife --outfile=dist/widget.js"
+  },
+  "devDependencies": {
+    "esbuild": "^0.24.0",
+    "typescript": "^5.6.0"
+  }
+}

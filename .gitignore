@@ -1,0 +1,30 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+
+# Node
+node_modules/
+dist/
+*.tsbuildinfo
+
+# Env & secrets
+.env
+.env.local
+*.local.json
+!infra/main.parameters.json
+
+# Azure
+.azure/
+
+# OS / editor
+.DS_Store
+.idea/
+.vscode/
+
+# Eval outputs
+evals/results/

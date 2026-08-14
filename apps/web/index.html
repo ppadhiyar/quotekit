@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>QuoteKit — Grounded AI Quoting</title>
+  <style>
+    :root {
+      --bg: #0f1420; --card: #1a2233; --text: #e8ecf4; --muted: #93a0b8;
+      --accent: #4f8ef7; --ok: #34c98e; --warn: #f5a623; --border: #2a3550;
+    }
+    * { box-sizing: border-box; margin: 0; }
+    body { font-family: -apple-system, "Segoe UI", sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; padding: 2rem 1rem; }
+    main { max-width: 720px; margin: 0 auto; }
+    h1 { font-size: 1.6rem; margin-bottom: .25rem; }
+    .sub { color: var(--muted); margin-bottom: 2rem; }
+    textarea { width: 100%; min-height: 90px; padding: .8rem; border-radius: 10px; border: 1px solid var(--border); background: var(--card); color: var(--text); font-size: 1rem; resize: vertical; }
+    button { margin-top: .75rem; padding: .7rem 1.6rem; border: 0; border-radius: 10px; background: var(--accent); color: #fff; font-size: 1rem; font-weight: 600; cursor: pointer; }
+    button:disabled { opacity: .5; cursor: wait; }
+    .quote { margin-top: 2rem; }
+    .badge { display: inline-block; padding: .2rem .7rem; border-radius: 999px; font-size: .8rem; font-weight: 600; }
+    .badge.approved { background: rgba(52,201,142,.15); color: var(--ok); }
+    .badge.needs_review { background: rgba(245,166,35,.15); color: var(--warn); }
+    table { width: 100%; border-collapse: collapse; margin-top: 1rem; }
+    th, td { text-align: left; padding: .6rem .5rem; border-bottom: 1px solid var(--border); font-size: .92rem; }
+    th { color: var(--muted); font-weight: 500; }
+    td.num { text-align: right; font-variant-numeric: tabular-nums; }
+    .cite { color: var(--muted); font-size: .78rem; margin-top: .15rem; }
+    .subtotal { text-align: right; margin-top: 1rem; font-size: 1.15rem; font-weight: 700; }
+    .meta { color: var(--muted); font-size: .85rem; margin-top: .5rem; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>QuoteKit</h1>
+    <p class="sub">Describe the job. Every price is retrieved from your indexed price list — never invented — and gated by a groundedness check.</p>
+
+    <textarea id="job" placeholder="e.g. Rebuild a 200 sq ft deck with pressure-treated lumber and two sets of stairs"></textarea>
+    <button id="go">Generate quote</button>
+
+    <div class="quote" id="result" hidden>
+      <span class="badge" id="status"></span>
+      <table>
+        <thead><tr><th>Item</th><th class="num">Qty</th><th class="num">Unit</th><th class="num">Total</th></tr></thead>
+        <tbody id="items"></tbody>
+      </table>
+      <p class="subtotal" id="subtotal"></p>
+      <p class="meta" id="meta"></p>
+    </div>
+  </main>
+
+  <script>
+    const API = window.QUOTEKIT_API || "http://localhost:8000";
+    const btn = document.getElementById("go");
+
+    btn.addEventListener("click", async () => {
+      const job = document.getElementById("job").value.trim();
+      if (job.length < 10) return alert("Add a bit more detail about the job.");
+      btn.disabled = true; btn.textContent = "Retrieving + evaluating…";
+      try {
+        const res = await fetch(API + "/quote", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ job_description: job }),
+        });
+        if (!res.ok) throw new Error(await res.text());
+        render(await res.json());
+      } catch (e) {
+        alert("Request failed: " + e.message);
+      } finally {
+        btn.disabled = false; btn.textContent = "Generate quote";
+      }
+    });
+
+    function render(q) {
+      const el = document.getElementById("result");
+      el.hidden = false;
+      const badge = document.getElementById("status");
+      badge.className = "badge " + q.status;
+      badge.textContent = q.status === "approved" ? "✓ Passed eval gate" : "⚠ Needs human review";
+
+      document.getElementById("items").innerHTML = q.line_items.map(li => `
+        <tr>
+          <td>${li.description}<div class="cite">source: ${li.citation.document} — “${li.citation.snippet}”</div></td>
+          <td class="num">${li.quantity} ${li.unit}</td>
+          <td class="num">$${li.unit_price.toFixed(2)}</td>
+          <td class="num">$${li.total.toFixed(2)}</td>
+        </tr>`).join("");
+
+      document.getElementById("subtotal").textContent = "Subtotal: $" + q.subtotal.toFixed(2);
+      document.getElementById("meta").textContent =
+        `Groundedness: ${q.groundedness_score ?? "n/a"}` +
+        (q.review_reasons.length ? " · Review reasons: " + q.review_reasons.join("; ") : "");
+    }
+  </script>
+</body>
+</html>

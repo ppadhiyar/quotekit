@@ -1,0 +1,5 @@
+{"job_description": "Rebuild a 200 sq ft deck with pressure-treated lumber and two sets of stairs", "expected_items": ["pressure-treated decking", "deck framing labour", "stair stringer"], "must_not_include": ["composite decking"]}
+{"job_description": "Install 40 linear ft of cedar fence, 6 ft tall, with one gate", "expected_items": ["cedar fence board", "fence post", "gate hardware", "fence labour"], "must_not_include": []}
+{"job_description": "Paint two bedrooms, walls and ceiling, about 400 sq ft total", "expected_items": ["interior paint", "painting labour"], "must_not_include": ["exterior paint"]}
+{"job_description": "Replace 3 interior doors including handles", "expected_items": ["interior door", "door handle", "door install labour"], "must_not_include": []}
+{"job_description": "Build me a spaceship landing pad", "expected_items": [], "must_not_include": [], "expect_status": "needs_review"}
