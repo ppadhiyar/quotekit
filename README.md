@@ -7,6 +7,10 @@
 
 Built on **Azure AI Foundry, Azure AI Search, LangChain/LangGraph, FastAPI**.
 
+**Live demo:** <https://victorious-cliff-08f5d320f.7.azurestaticapps.net> · API docs: [`/docs`](https://quotekit-api-gtpvdikyux43s.livelymeadow-6c9ebf07.eastus2.azurecontainerapps.io/docs)
+
+> Without an access code the demo returns realistic sample data at zero LLM cost; live AI mode is unlocked per showcase session. This cost-gating is itself part of the design — see [Access control](#access-control).
+
 > The differentiator is the **evaluation gate**: no answer reaches the user unless it passes a groundedness check against the retrieved sources. High-confidence results auto-apply; low-confidence results are flagged for human review — the same confidence-thresholding pattern used in production agentic systems.
 
 ## Architecture
@@ -74,6 +78,16 @@ uvicorn app.main:app --reload
 - `GET  /healthz` — liveness
 
 Set `DEMO_MODE=true` to run without any Azure resources (canned retrieval + responses) — useful for UI work and zero-cost public demos.
+
+## Access control
+
+| Traffic | Behavior |
+|---|---|
+| Public (no code) | Canned demo responses, `mode: "demo"` — zero LLM cost |
+| `X-Access-Code` header | Live retrieval + LLM + eval gate, capped at 100 requests/day |
+| `/ingest` uploads | Require `X-Admin-Key` |
+
+All traffic is additionally rate-limited per IP, and a monthly Azure budget alert backstops everything.
 
 ## Deploy
 
