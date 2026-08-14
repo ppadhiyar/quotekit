@@ -30,7 +30,10 @@ def _get_evaluator():
             api_version=s.azure_openai_api_version,
             azure_deployment=s.azure_openai_chat_deployment,
         )
-        _evaluator = GroundednessEvaluator(model_config)
+        # is_reasoning_model: gpt-5-family deployments reject 'max_tokens'
+        # (requiring 'max_completion_tokens'); this flag makes the evaluator
+        # use the reasoning-model parameter set.
+        _evaluator = GroundednessEvaluator(model_config, is_reasoning_model=True)
     return _evaluator
 
 
