@@ -10,7 +10,7 @@ Three layers keep the public demo from generating real spend:
 
 import hmac
 import threading
-from datetime import date, datetime, timezone
+from datetime import datetime, timezone
 
 from ..config import get_settings
 

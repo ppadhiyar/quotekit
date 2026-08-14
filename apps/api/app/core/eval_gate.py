@@ -18,7 +18,10 @@ _evaluator = None
 def _get_evaluator():
     global _evaluator
     if _evaluator is None:
-        from azure.ai.evaluation import AzureOpenAIModelConfiguration, GroundednessEvaluator
+        from azure.ai.evaluation import (
+            AzureOpenAIModelConfiguration,
+            GroundednessEvaluator,
+        )
 
         s = get_settings()
         model_config = AzureOpenAIModelConfiguration(

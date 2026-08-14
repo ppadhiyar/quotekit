@@ -6,6 +6,7 @@ targetScope = 'resourceGroup'
 param baseName string
 param location string
 param openAiLocation string
+param searchLocation string
 param envName string
 
 @secure()
@@ -19,7 +20,7 @@ var suffix = uniqueString(resourceGroup().id)
 // --- Azure AI Search (FREE tier: 50 MB, 3 indexes) -------------------------
 resource search 'Microsoft.Search/searchServices@2024-06-01-preview' = {
   name: '${baseName}-search-${suffix}'
-  location: location
+  location: searchLocation
   sku: {
     name: 'free'
   }

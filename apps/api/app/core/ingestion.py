@@ -85,7 +85,7 @@ def _chunks_via_document_intelligence(filename: str, raw: bytes) -> tuple[list[d
             if cell.row_index == 0:
                 continue
             rows.setdefault(cell.row_index, []).append(cell.content)
-        for row_index, values in rows.items():
+        for values in rows.values():
             paired = ", ".join(
                 f"{h}: {v}" for h, v in zip(headers, values) if v
             ) or " | ".join(values)
@@ -123,8 +123,12 @@ def _chunks_via_document_intelligence(filename: str, raw: bytes) -> tuple[list[d
 def _chunks_via_pypdf(filename: str, raw: bytes) -> tuple[list[dict], list[str]]:
     from pypdf import PdfReader
 
-    warnings = ["Using pypdf fallback — table structure may be lossy. "
-                "Configure Document Intelligence for production ingestion."]
+    warnings = [
+        (
+            "Using pypdf fallback — table structure may be lossy. "
+            "Configure Document Intelligence for production ingestion."
+        )
+    ]
     reader = PdfReader(io.BytesIO(raw))
     chunks: list[dict] = []
     for page_num, page in enumerate(reader.pages, start=1):

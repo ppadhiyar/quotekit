@@ -14,6 +14,9 @@ param location string
 @description('Region for the Azure OpenAI account (model availability varies)')
 param openAiLocation string = 'eastus2'
 
+@description('Region for AI Search (decoupled — eastus2 has capacity constraints)')
+param searchLocation string = 'canadacentral'
+
 @secure()
 @description('Code that unlocks live LLM responses (public traffic gets demo data)')
 param accessCode string
@@ -43,6 +46,7 @@ module resources 'resources.bicep' = {
     baseName: 'quotekit'
     location: location
     openAiLocation: openAiLocation
+    searchLocation: searchLocation
     envName: environmentName
     accessCode: accessCode
     adminApiKey: adminApiKey
