@@ -46,7 +46,9 @@ resource chatDeployment 'Microsoft.CognitiveServices/accounts/deployments@2024-1
   parent: openAi
   name: 'gpt-5.4-mini'
   sku: {
-    name: 'GlobalStandard'
+    // Subscription has 0 GlobalStandard quota for this model but 200 units
+    // of DataZoneStandard (~10% higher per-token cost, negligible at demo scale).
+    name: 'DataZoneStandard'
     capacity: 10
   }
   properties: {
