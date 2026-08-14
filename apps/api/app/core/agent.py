@@ -56,12 +56,12 @@ class AgentState(TypedDict, total=False):
 
 def _llm() -> AzureChatOpenAI:
     s = get_settings()
+    # No explicit temperature: gpt-5-family models accept only the default.
     return AzureChatOpenAI(
         azure_endpoint=s.azure_openai_endpoint,
         api_key=s.azure_openai_api_key,
         api_version=s.azure_openai_api_version,
         azure_deployment=s.azure_openai_chat_deployment,
-        temperature=0,
     )
 
 

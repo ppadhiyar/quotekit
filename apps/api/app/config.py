@@ -10,7 +10,7 @@ class Settings(BaseSettings):
     azure_openai_endpoint: str = ""
     azure_openai_api_key: str = ""
     azure_openai_api_version: str = "2024-10-21"
-    azure_openai_chat_deployment: str = "gpt-4o-mini"
+    azure_openai_chat_deployment: str = "gpt-5.4-mini"
     azure_openai_embedding_deployment: str = "text-embedding-3-small"
 
     # Azure AI Search

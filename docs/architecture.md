@@ -23,7 +23,7 @@ retrieve ──► generate ──► evaluate ──┬─► approved (return 
 ```
 
 - **retrieve** — hybrid search (BM25 + vector, `text-embedding-3-small`) against Azure AI Search, top 8.
-- **generate** — `gpt-4o-mini`, temperature 0, structured JSON output. The system prompt forbids inventing prices; items without a retrieved source go to `missing_items`.
+- **generate** — `gpt-5.4-mini`, temperature 0, structured JSON output. The system prompt forbids inventing prices; items without a retrieved source go to `missing_items`.
 - **evaluate** — `GroundednessEvaluator` from `azure-ai-evaluation` scores the draft against the retrieved context. Missing items or a low score routes to `needs_review`.
 
 ## Ingestion: why tables get special treatment

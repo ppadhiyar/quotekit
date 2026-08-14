@@ -23,7 +23,7 @@ flowchart LR
 
     subgraph Query["LangGraph agent"]
         F[Job description /<br/>chat question] --> G[Retrieve<br/>hybrid search]
-        G --> H[Generate<br/>gpt-4o-mini<br/>structured output]
+        G --> H[Generate<br/>gpt-5.4-mini<br/>structured output]
         H --> I{Eval gate<br/>groundedness ≥ 0.6?}
         I -- yes --> J[Cited quote / answer]
         I -- no --> K[Flag for human review]
@@ -41,7 +41,7 @@ flowchart LR
 | Component | SKU | Idle cost |
 |---|---|---|
 | Azure AI Search | Free tier (50 MB, 3 indexes) | $0 |
-| Azure OpenAI (via AI Foundry) | gpt-4o-mini + text-embedding-3-small, pay-per-token | $0 idle, pennies per demo session |
+| Azure OpenAI (via AI Foundry) | gpt-5.4-mini + text-embedding-3-small, pay-per-token | $0 idle, pennies per demo session |
 | API | Container Apps, scale-to-zero | $0 idle |
 | Frontend / widget | Static Web Apps free tier | $0 |
 | Demo hardening | IP rate limits, per-session token caps, cached canned answers (`DEMO_MODE`) | — |
@@ -82,7 +82,7 @@ azd auth login
 azd up
 ```
 
-Provisions: resource group, Azure AI Search (free), Azure OpenAI with `gpt-4o-mini` + `text-embedding-3-small` deployments, Container App (scale-to-zero), Log Analytics.
+Provisions: resource group, Azure AI Search (free), Azure OpenAI with `gpt-5.4-mini` + `text-embedding-3-small` deployments, Container App (scale-to-zero), Log Analytics.
 
 ## Evals
 
