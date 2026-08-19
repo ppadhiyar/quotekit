@@ -57,6 +57,15 @@
     .history-load .amt { flex: 0 0 auto; font-weight: 600; font-size: .85rem; font-variant-numeric: tabular-nums; }
     .history-rm { flex: 0 0 auto; width: 34px; border: 1px solid var(--border); border-radius: 10px; background: var(--card); color: var(--muted); font-size: 1rem; line-height: 1; cursor: pointer; }
     .history-rm:hover { border-color: var(--warn); color: var(--warn); }
+    .quote-actions { display: flex; gap: .5rem; margin-top: 1rem; flex-wrap: wrap; }
+    .quote-actions button { margin-top: 0; padding: .5rem 1rem; font-size: .85rem; font-weight: 500; background: var(--card); color: var(--text); border: 1px solid var(--border); }
+    .quote-actions button:hover { border-color: var(--accent); background: var(--chip-hover); }
+    @media print {
+      body * { visibility: hidden; }
+      .quote, .quote * { visibility: visible; }
+      .quote { position: absolute; top: 0; left: 0; width: 100%; margin: 0; }
+      .quote-actions { display: none; }
+    }
   </style>
 </head>
 <body>
@@ -89,6 +98,11 @@
       </table>
       <p class="subtotal" id="subtotal"></p>
       <p class="meta" id="meta"></p>
+      <div class="quote-actions">
+        <button type="button" id="printQuote">🖨 Print / Save as PDF</button>
+        <button type="button" id="copyQuote">Copy summary</button>
+        <button type="button" id="downloadCsv">Download CSV</button>
+      </div>
     </div>
   </main>
 
@@ -156,7 +170,7 @@
         });
         if (!res.ok) throw new Error(await res.text());
         const data = await res.json();
-        render(data);
+        render(data, job);
         addToHistory(job, data);
       } catch (e) {
         alert("Request failed: " + e.message);
@@ -230,7 +244,7 @@
         const entry = loadHistory().find(x => x.id === load.dataset.id);
         if (!entry) return;
         document.getElementById("job").value = entry.job;
-        render(entry.quote);
+        render(entry.quote, entry.job);
         document.getElementById("result").scrollIntoView({ behavior: "smooth", block: "start" });
       }
     });
@@ -242,7 +256,13 @@
 
     renderHistory();
 
-    function render(q) {
+    // Export: the last-rendered quote, kept for print/copy/CSV actions.
+    let currentQuote = null;
+    let currentJob = "";
+
+    function render(q, job) {
+      currentQuote = q;
+      currentJob = job || currentJob;
       const el = document.getElementById("result");
       el.hidden = false;
       const badge = document.getElementById("status");
@@ -263,6 +283,58 @@
         `Groundedness: ${q.groundedness_score ?? "n/a"}` +
         (q.review_reasons.length ? " · Review reasons: " + q.review_reasons.join("; ") : "");
     }
+
+    function csvEscape(v) {
+      const s = String(v ?? "");
+      return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+    }
+
+    function downloadFile(filename, contents, mime) {
+      const blob = new Blob([contents], { type: mime });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url; a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    }
+
+    document.getElementById("printQuote").addEventListener("click", () => window.print());
+
+    document.getElementById("downloadCsv").addEventListener("click", () => {
+      if (!currentQuote) return;
+      const rows = [["Item", "Qty", "Unit", "Unit price", "Total", "Source"]];
+      currentQuote.line_items.forEach(li => rows.push([
+        li.description, li.quantity, li.unit, li.unit_price.toFixed(2), li.total.toFixed(2), li.citation.document,
+      ]));
+      rows.push(["Subtotal", "", "", "", currentQuote.subtotal.toFixed(2), ""]);
+      const csv = rows.map(r => r.map(csvEscape).join(",")).join("\n");
+      downloadFile("quotekit-quote.csv", csv, "text/csv");
+    });
+
+    document.getElementById("copyQuote").addEventListener("click", async (e) => {
+      if (!currentQuote) return;
+      const lines = [
+        currentJob ? `Job: ${currentJob}` : null,
+        `Status: ${currentQuote.status === "approved" ? "Passed eval gate" : "Needs human review"}`,
+        "",
+        ...currentQuote.line_items.map(li =>
+          `${li.description} — ${li.quantity} ${li.unit} × $${li.unit_price.toFixed(2)} = $${li.total.toFixed(2)}`),
+        "",
+        `Subtotal: $${currentQuote.subtotal.toFixed(2)}`,
+      ].filter(l => l !== null);
+      const text = lines.join("\n");
+      const btnEl = e.currentTarget;
+      const original = btnEl.textContent;
+      try {
+        await navigator.clipboard.writeText(text);
+        btnEl.textContent = "Copied!";
+      } catch {
+        btnEl.textContent = "Copy failed";
+      }
+      setTimeout(() => { btnEl.textContent = original; }, 1500);
+    });
   </script>
 </body>
 </html>
