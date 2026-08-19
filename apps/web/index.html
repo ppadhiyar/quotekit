@@ -40,6 +40,23 @@
     .cite { color: var(--muted); font-size: .78rem; margin-top: .15rem; }
     .subtotal { text-align: right; margin-top: 1rem; font-size: 1.15rem; font-weight: 700; }
     .meta { color: var(--muted); font-size: .85rem; margin-top: .5rem; }
+    .history { margin-top: 1.5rem; }
+    .history-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: .5rem; }
+    .history-head span { color: var(--muted); font-size: .78rem; text-transform: uppercase; letter-spacing: .04em; }
+    .history-head button { background: none; border: 0; color: var(--muted); font-size: .8rem; cursor: pointer; padding: 0; text-decoration: underline; }
+    .history-head button:hover { color: var(--text); }
+    .history-list { list-style: none; display: flex; flex-direction: column; gap: .4rem; }
+    .history-item { display: flex; align-items: stretch; gap: .4rem; }
+    .history-load { flex: 1; display: flex; align-items: center; gap: .6rem; min-width: 0; padding: .55rem .8rem; border: 1px solid var(--border); border-radius: 10px; background: var(--card); color: var(--text); font: inherit; text-align: left; cursor: pointer; }
+    .history-load:hover, .history-load:focus-visible { border-color: var(--accent); background: var(--chip-hover); }
+    .history-load .dot { width: 8px; height: 8px; flex: 0 0 auto; border-radius: 50%; background: var(--muted); }
+    .history-load .dot.approved { background: var(--ok); }
+    .history-load .dot.needs_review { background: var(--warn); }
+    .history-load .job { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: .85rem; }
+    .history-load .when { flex: 0 0 auto; color: var(--muted); font-size: .75rem; }
+    .history-load .amt { flex: 0 0 auto; font-weight: 600; font-size: .85rem; font-variant-numeric: tabular-nums; }
+    .history-rm { flex: 0 0 auto; width: 34px; border: 1px solid var(--border); border-radius: 10px; background: var(--card); color: var(--muted); font-size: 1rem; line-height: 1; cursor: pointer; }
+    .history-rm:hover { border-color: var(--warn); color: var(--warn); }
   </style>
 </head>
 <body>
@@ -55,6 +72,14 @@
     <input id="code" type="password" placeholder="Access code (optional — without it you get sample demo data)"
            style="width:100%;margin-top:.5rem;padding:.6rem .8rem;border-radius:10px;border:1px solid var(--border);background:var(--card);color:var(--text);font-size:.9rem;" />
     <button id="go">Generate quote</button>
+
+    <section class="history" id="history" hidden>
+      <div class="history-head">
+        <span>Recent quotes</span>
+        <button type="button" id="historyClear">Clear</button>
+      </div>
+      <ul class="history-list" id="historyList"></ul>
+    </section>
 
     <div class="quote" id="result" hidden>
       <span class="badge" id="status"></span>
@@ -130,7 +155,9 @@
           body: JSON.stringify({ job_description: job }),
         });
         if (!res.ok) throw new Error(await res.text());
-        render(await res.json());
+        const data = await res.json();
+        render(data);
+        addToHistory(job, data);
       } catch (e) {
         alert("Request failed: " + e.message);
       } finally {
@@ -138,6 +165,82 @@
         document.querySelectorAll(".chip").forEach(c => c.disabled = false);
       }
     }
+
+    // Quote history: last few generated quotes, kept in localStorage so a
+    // visitor can revisit them (no re-query) across reloads of the same browser.
+    const HISTORY_KEY = "qk-history";
+    const MAX_HISTORY = 12;
+
+    function loadHistory() {
+      try { return JSON.parse(store.get(HISTORY_KEY) || "[]"); } catch { return []; }
+    }
+    function saveHistory(items) { store.set(HISTORY_KEY, JSON.stringify(items)); }
+
+    function escapeHtml(s) {
+      return s.replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+    }
+
+    function formatWhen(ts) {
+      const min = Math.round((Date.now() - ts) / 60000);
+      if (min < 1) return "just now";
+      if (min < 60) return min + "m ago";
+      const hr = Math.round(min / 60);
+      if (hr < 24) return hr + "h ago";
+      const days = Math.round(hr / 24);
+      if (days < 7) return days + "d ago";
+      return new Date(ts).toLocaleDateString(undefined, { month: "short", day: "numeric" });
+    }
+
+    function addToHistory(job, quote) {
+      const items = loadHistory();
+      items.unshift({
+        id: crypto.randomUUID ? crypto.randomUUID() : Date.now() + "-" + Math.random().toString(36).slice(2),
+        job,
+        ts: Date.now(),
+        quote,
+      });
+      saveHistory(items.slice(0, MAX_HISTORY));
+      renderHistory();
+    }
+
+    function renderHistory() {
+      const items = loadHistory();
+      document.getElementById("history").hidden = items.length === 0;
+      document.getElementById("historyList").innerHTML = items.map(entry => `
+        <li class="history-item">
+          <button type="button" class="history-load" data-id="${entry.id}" title="${escapeHtml(entry.job)}">
+            <span class="dot ${entry.quote.status}"></span>
+            <span class="job">${escapeHtml(entry.job)}</span>
+            <span class="when">${formatWhen(entry.ts)}</span>
+            <span class="amt">$${entry.quote.subtotal.toFixed(2)}</span>
+          </button>
+          <button type="button" class="history-rm" data-id="${entry.id}" aria-label="Remove from history">×</button>
+        </li>`).join("");
+    }
+
+    document.getElementById("historyList").addEventListener("click", (e) => {
+      const rm = e.target.closest(".history-rm");
+      if (rm) {
+        saveHistory(loadHistory().filter(x => x.id !== rm.dataset.id));
+        renderHistory();
+        return;
+      }
+      const load = e.target.closest(".history-load");
+      if (load) {
+        const entry = loadHistory().find(x => x.id === load.dataset.id);
+        if (!entry) return;
+        document.getElementById("job").value = entry.job;
+        render(entry.quote);
+        document.getElementById("result").scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+    });
+
+    document.getElementById("historyClear").addEventListener("click", () => {
+      saveHistory([]);
+      renderHistory();
+    });
+
+    renderHistory();
 
     function render(q) {
       const el = document.getElementById("result");
