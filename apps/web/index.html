@@ -57,6 +57,8 @@
     .history-load .amt { flex: 0 0 auto; font-weight: 600; font-size: .85rem; font-variant-numeric: tabular-nums; }
     .history-rm { flex: 0 0 auto; width: 34px; border: 1px solid var(--border); border-radius: 10px; background: var(--card); color: var(--muted); font-size: 1rem; line-height: 1; cursor: pointer; }
     .history-rm:hover { border-color: var(--warn); color: var(--warn); }
+    .export { background: var(--card); color: var(--text); border: 1px solid var(--border); }
+    .export:hover { border-color: var(--accent); background: var(--chip-hover); }
   </style>
 </head>
 <body>
@@ -89,6 +91,7 @@
       </table>
       <p class="subtotal" id="subtotal"></p>
       <p class="meta" id="meta"></p>
+      <button type="button" id="exportCsv" class="export">Download CSV</button>
     </div>
   </main>
 
@@ -156,7 +159,7 @@
         });
         if (!res.ok) throw new Error(await res.text());
         const data = await res.json();
-        render(data);
+        render(data, job);
         addToHistory(job, data);
       } catch (e) {
         alert("Request failed: " + e.message);
@@ -230,7 +233,7 @@
         const entry = loadHistory().find(x => x.id === load.dataset.id);
         if (!entry) return;
         document.getElementById("job").value = entry.job;
-        render(entry.quote);
+        render(entry.quote, entry.job);
         document.getElementById("result").scrollIntoView({ behavior: "smooth", block: "start" });
       }
     });
@@ -242,7 +245,12 @@
 
     renderHistory();
 
-    function render(q) {
+    let currentQuote = null;
+    let currentJob = "";
+
+    function render(q, job) {
+      currentQuote = q;
+      currentJob = job || "";
       const el = document.getElementById("result");
       el.hidden = false;
       const badge = document.getElementById("status");
@@ -263,6 +271,41 @@
         `Groundedness: ${q.groundedness_score ?? "n/a"}` +
         (q.review_reasons.length ? " · Review reasons: " + q.review_reasons.join("; ") : "");
     }
+
+    // Client-side CSV export: lets a contractor drop the quote straight into
+    // a spreadsheet or invoicing tool. No server round-trip needed.
+    function csvCell(value) {
+      const s = String(value ?? "");
+      return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+    }
+
+    function quoteToCsv(q, job) {
+      const rows = [
+        ["Job", job],
+        [],
+        ["Item", "Qty", "Unit", "Unit Price", "Total", "Source", "Citation"],
+        ...q.line_items.map(li => [
+          li.description, li.quantity, li.unit,
+          li.unit_price.toFixed(2), li.total.toFixed(2),
+          li.citation.document, li.citation.snippet,
+        ]),
+        [],
+        ["Subtotal", "", "", "", q.subtotal.toFixed(2)],
+      ];
+      return rows.map(row => row.map(csvCell).join(",")).join("\r\n");
+    }
+
+    document.getElementById("exportCsv").addEventListener("click", () => {
+      if (!currentQuote) return;
+      const csv = quoteToCsv(currentQuote, currentJob);
+      const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "quote-" + new Date().toISOString().slice(0, 10) + ".csv";
+      a.click();
+      URL.revokeObjectURL(url);
+    });
   </script>
 </body>
 </html>
