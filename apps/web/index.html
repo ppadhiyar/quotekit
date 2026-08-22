@@ -40,6 +40,16 @@
     .cite { color: var(--muted); font-size: .78rem; margin-top: .15rem; }
     .subtotal { text-align: right; margin-top: 1rem; font-size: 1.15rem; font-weight: 700; }
     .meta { color: var(--muted); font-size: .85rem; margin-top: .5rem; }
+    .quote-actions { display: flex; gap: .5rem; margin-top: 1rem; }
+    .quote-actions button { margin: 0; padding: .5rem 1rem; font-size: .85rem; font-weight: 500; background: var(--card); color: var(--text); border: 1px solid var(--border); }
+    .quote-actions button:hover { border-color: var(--accent); }
+    @media print {
+      #theme, #chips, textarea, #code, #go, .history, .quote-actions { display: none !important; }
+      body { padding: 0; background: #fff; color: #000; }
+      .quote { margin-top: 0; }
+      table, .cite, .meta { color: #000; }
+      th, td { border-bottom: 1px solid #ccc; }
+    }
     .history { margin-top: 1.5rem; }
     .history-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: .5rem; }
     .history-head span { color: var(--muted); font-size: .78rem; text-transform: uppercase; letter-spacing: .04em; }
@@ -89,6 +99,10 @@
       </table>
       <p class="subtotal" id="subtotal"></p>
       <p class="meta" id="meta"></p>
+      <div class="quote-actions">
+        <button type="button" id="copyQuote">📋 Copy summary</button>
+        <button type="button" id="printQuote">🖨️ Print / Save PDF</button>
+      </div>
     </div>
   </main>
 
@@ -156,7 +170,7 @@
         });
         if (!res.ok) throw new Error(await res.text());
         const data = await res.json();
-        render(data);
+        render(data, job);
         addToHistory(job, data);
       } catch (e) {
         alert("Request failed: " + e.message);
@@ -230,7 +244,7 @@
         const entry = loadHistory().find(x => x.id === load.dataset.id);
         if (!entry) return;
         document.getElementById("job").value = entry.job;
-        render(entry.quote);
+        render(entry.quote, entry.job);
         document.getElementById("result").scrollIntoView({ behavior: "smooth", block: "start" });
       }
     });
@@ -242,7 +256,45 @@
 
     renderHistory();
 
-    function render(q) {
+    // Copy/print act on whatever quote is currently displayed (fresh or
+    // reloaded from history), so keep a reference alongside the render.
+    let currentJob = "";
+    let currentQuote = null;
+
+    function quoteSummaryText() {
+      if (!currentQuote) return "";
+      const lines = currentQuote.line_items.map(li =>
+        `- ${li.description}: ${li.quantity} ${li.unit} × $${li.unit_price.toFixed(2)} = $${li.total.toFixed(2)}`);
+      return [
+        `QuoteKit estimate — ${currentJob}`,
+        currentQuote.status === "approved" ? "Status: Passed eval gate" : "Status: Needs human review",
+        "",
+        ...lines,
+        "",
+        `Subtotal: $${currentQuote.subtotal.toFixed(2)}`,
+        `Generated ${new Date().toLocaleDateString()}`,
+      ].join("\n");
+    }
+
+    document.getElementById("printQuote").addEventListener("click", () => window.print());
+
+    document.getElementById("copyQuote").addEventListener("click", async (e) => {
+      const text = quoteSummaryText();
+      if (!text) return;
+      const label = e.target;
+      const original = label.textContent;
+      try {
+        await navigator.clipboard.writeText(text);
+        label.textContent = "✓ Copied!";
+      } catch {
+        label.textContent = "Copy failed";
+      }
+      setTimeout(() => { label.textContent = original; }, 1500);
+    });
+
+    function render(q, job) {
+      if (job !== undefined) currentJob = job;
+      currentQuote = q;
       const el = document.getElementById("result");
       el.hidden = false;
       const badge = document.getElementById("status");
