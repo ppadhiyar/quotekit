@@ -40,6 +40,15 @@
     .cite { color: var(--muted); font-size: .78rem; margin-top: .15rem; }
     .subtotal { text-align: right; margin-top: 1rem; font-size: 1.15rem; font-weight: 700; }
     .meta { color: var(--muted); font-size: .85rem; margin-top: .5rem; }
+    .add-line-wrap { margin-top: .75rem; text-align: right; }
+    .add-line-btn { margin-top: 0; padding: .5rem 1rem; font-size: .85rem; font-weight: 600; background: transparent; border: 1px dashed var(--border); color: var(--muted); border-radius: 8px; cursor: pointer; }
+    .add-line-btn:hover { border-color: var(--accent); color: var(--accent); background: var(--chip-hover); }
+    tr.custom-row td { padding: .4rem .5rem; vertical-align: middle; }
+    .custom-row input[type="text"] { width: 100%; border: 1px solid var(--border); background: var(--bg); color: var(--text); border-radius: 6px; padding: .35rem .5rem; font-size: .88rem; }
+    .custom-row input[type="number"] { width: 100%; border: 1px solid var(--border); background: var(--bg); color: var(--text); border-radius: 6px; padding: .35rem .4rem; font-size: .88rem; text-align: right; font-variant-numeric: tabular-nums; }
+    .custom-row .line-total { white-space: nowrap; }
+    .custom-row .rm-line { margin-top: 0; padding: 0 .35rem; border: 0; background: none; color: var(--muted); font-size: 1rem; line-height: 1; cursor: pointer; }
+    .custom-row .rm-line:hover { color: var(--warn); }
     .history { margin-top: 1.5rem; }
     .history-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: .5rem; }
     .history-head span { color: var(--muted); font-size: .78rem; text-transform: uppercase; letter-spacing: .04em; }
@@ -87,6 +96,9 @@
         <thead><tr><th>Item</th><th class="num">Qty</th><th class="num">Unit</th><th class="num">Total</th></tr></thead>
         <tbody id="items"></tbody>
       </table>
+      <div class="add-line-wrap">
+        <button type="button" id="addLine" class="add-line-btn">+ Add line item</button>
+      </div>
       <p class="subtotal" id="subtotal"></p>
       <p class="meta" id="meta"></p>
     </div>
@@ -242,9 +254,76 @@
 
     renderHistory();
 
+    // Custom line items: lets a contractor add ad-hoc rows (delivery fee,
+    // rounding, extra labor) on top of the grounded, retrieved items.
+    // Not persisted — scoped to the currently displayed quote.
+    let lastQuote = null;
+    let customLines = [];
+
+    function computeCustomTotal() {
+      return customLines.reduce((sum, l) => sum + (Number(l.qty) || 0) * (Number(l.price) || 0), 0);
+    }
+
+    function updateSubtotalDisplay() {
+      if (!lastQuote) return;
+      const total = lastQuote.subtotal + computeCustomTotal();
+      document.getElementById("subtotal").textContent = "Subtotal: $" + total.toFixed(2);
+    }
+
+    function renderCustomRows() {
+      const tbody = document.getElementById("items");
+      tbody.querySelectorAll("tr.custom-row").forEach(r => r.remove());
+      customLines.forEach(line => {
+        const tr = document.createElement("tr");
+        tr.className = "custom-row";
+        tr.dataset.id = line.id;
+        const total = (Number(line.qty) || 0) * (Number(line.price) || 0);
+        tr.innerHTML = `
+          <td><input type="text" class="cl-desc" placeholder="Custom item…" value="${escapeHtml(line.desc)}" /></td>
+          <td class="num"><input type="number" class="cl-qty" min="0" step="1" value="${line.qty}" /></td>
+          <td class="num"><input type="number" class="cl-price" min="0" step="0.01" value="${line.price}" /></td>
+          <td class="num line-total">$${total.toFixed(2)} <button type="button" class="rm-line" aria-label="Remove line">×</button></td>`;
+        tbody.appendChild(tr);
+      });
+    }
+
+    document.getElementById("items").addEventListener("input", (e) => {
+      const tr = e.target.closest("tr.custom-row");
+      if (!tr) return;
+      const line = customLines.find(l => l.id === tr.dataset.id);
+      if (!line) return;
+      if (e.target.classList.contains("cl-desc")) line.desc = e.target.value;
+      if (e.target.classList.contains("cl-qty")) line.qty = e.target.value;
+      if (e.target.classList.contains("cl-price")) line.price = e.target.value;
+      const total = (Number(line.qty) || 0) * (Number(line.price) || 0);
+      tr.querySelector(".line-total").firstChild.textContent = "$" + total.toFixed(2) + " ";
+      updateSubtotalDisplay();
+    });
+
+    document.getElementById("items").addEventListener("click", (e) => {
+      const rm = e.target.closest(".rm-line");
+      if (!rm) return;
+      const tr = e.target.closest("tr.custom-row");
+      customLines = customLines.filter(l => l.id !== tr.dataset.id);
+      renderCustomRows();
+      updateSubtotalDisplay();
+    });
+
+    document.getElementById("addLine").addEventListener("click", () => {
+      if (!lastQuote) return;
+      customLines.push({
+        id: crypto.randomUUID ? crypto.randomUUID() : Date.now() + "-" + Math.random().toString(36).slice(2),
+        desc: "", qty: 1, price: 0,
+      });
+      renderCustomRows();
+      updateSubtotalDisplay();
+    });
+
     function render(q) {
       const el = document.getElementById("result");
       el.hidden = false;
+      lastQuote = q;
+      customLines = [];
       const badge = document.getElementById("status");
       badge.className = "badge " + q.status;
       badge.textContent = q.status === "approved" ? "✓ Passed eval gate" : "⚠ Needs human review";
@@ -256,8 +335,9 @@
           <td class="num">$${li.unit_price.toFixed(2)}</td>
           <td class="num">$${li.total.toFixed(2)}</td>
         </tr>`).join("");
+      renderCustomRows();
+      updateSubtotalDisplay();
 
-      document.getElementById("subtotal").textContent = "Subtotal: $" + q.subtotal.toFixed(2);
       document.getElementById("meta").textContent =
         (q.mode === "demo" ? "Sample data (demo mode — enter an access code for live AI) · " : "") +
         `Groundedness: ${q.groundedness_score ?? "n/a"}` +
