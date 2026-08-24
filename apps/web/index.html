@@ -1,1 +1,399 @@
-__QUOTEKIT_INDEX_HTML__
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>QuoteKit — Grounded AI Quoting</title>
+  <style>
+    :root {
+      --bg: #0f1420; --card: #1a2233; --text: #e8ecf4; --muted: #93a0b8;
+      --accent: #4f8ef7; --ok: #34c98e; --warn: #f5a623; --border: #2a3550;
+      --chip-hover: rgba(79,142,247,.12);
+    }
+    :root[data-theme="light"] {
+      --bg: #f4f6fb; --card: #ffffff; --text: #1a2233; --muted: #5a6a85;
+      --accent: #2f6fe4; --ok: #178a5e; --warn: #b26a00; --border: #d8e0ee;
+      --chip-hover: rgba(47,111,228,.08);
+    }
+    * { box-sizing: border-box; margin: 0; }
+    body { font-family: -apple-system, "Segoe UI", sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; padding: 2rem 1rem; transition: background .2s, color .2s; }
+    #theme { position: fixed; top: 14px; right: 14px; width: 40px; height: 40px; border-radius: 50%; border: 1px solid var(--border); background: var(--card); font-size: 18px; cursor: pointer; z-index: 10; }
+    main { max-width: 720px; margin: 0 auto; }
+    h1 { font-size: 1.6rem; margin-bottom: .25rem; }
+    .sub { color: var(--muted); margin-bottom: 2rem; }
+    textarea { width: 100%; min-height: 90px; padding: .8rem; border-radius: 10px; border: 1px solid var(--border); background: var(--card); color: var(--text); font-size: 1rem; resize: vertical; }
+    button { margin-top: .75rem; padding: .7rem 1.6rem; border: 0; border-radius: 10px; background: var(--accent); color: #fff; font-size: 1rem; font-weight: 600; cursor: pointer; }
+    button:disabled { opacity: .5; cursor: wait; }
+    .chips { display: flex; flex-wrap: wrap; gap: .5rem; margin-bottom: .75rem; }
+    .chip { padding: .45rem .9rem; border-radius: 999px; border: 1px solid var(--border); background: var(--card); color: var(--text); font-size: .85rem; cursor: pointer; transition: border-color .15s, background .15s; }
+    .chip:hover { border-color: var(--accent); background: var(--chip-hover); }
+    .chip:disabled { opacity: .5; cursor: wait; }
+    .chips-label { width: 100%; color: var(--muted); font-size: .8rem; margin-bottom: .1rem; }
+    .quote { margin-top: 2rem; }
+    .badge { display: inline-block; padding: .2rem .7rem; border-radius: 999px; font-size: .8rem; font-weight: 600; }
+    .badge.approved { background: color-mix(in srgb, var(--ok) 15%, transparent); color: var(--ok); }
+    .badge.needs_review { background: color-mix(in srgb, var(--warn) 15%, transparent); color: var(--warn); }
+    table { width: 100%; border-collapse: collapse; margin-top: 1rem; }
+    th, td { text-align: left; padding: .6rem .5rem; border-bottom: 1px solid var(--border); font-size: .92rem; }
+    th { color: var(--muted); font-weight: 500; }
+    td.num { text-align: right; font-variant-numeric: tabular-nums; }
+    .cite { color: var(--muted); font-size: .78rem; margin-top: .15rem; }
+    .subtotal { text-align: right; margin-top: 1rem; font-size: 1.15rem; font-weight: 700; }
+    .meta { color: var(--muted); font-size: .85rem; margin-top: .5rem; }
+    .add-line-wrap { margin-top: .75rem; text-align: right; }
+    .add-line-btn { margin-top: 0; padding: .5rem 1rem; font-size: .85rem; font-weight: 600; background: transparent; border: 1px dashed var(--border); color: var(--muted); border-radius: 8px; cursor: pointer; }
+    .add-line-btn:hover { border-color: var(--accent); color: var(--accent); background: var(--chip-hover); }
+    tr.custom-row td { padding: .4rem .5rem; vertical-align: middle; }
+    .custom-row input[type="text"] { width: 100%; border: 1px solid var(--border); background: var(--bg); color: var(--text); border-radius: 6px; padding: .35rem .5rem; font-size: .88rem; }
+    .custom-row input[type="number"] { width: 100%; border: 1px solid var(--border); background: var(--bg); color: var(--text); border-radius: 6px; padding: .35rem .4rem; font-size: .88rem; text-align: right; font-variant-numeric: tabular-nums; }
+    .custom-row .line-total { white-space: nowrap; }
+    .custom-row .rm-line { margin-top: 0; padding: 0 .35rem; border: 0; background: none; color: var(--muted); font-size: 1rem; line-height: 1; cursor: pointer; }
+    .custom-row .rm-line:hover { color: var(--warn); }
+    .history { margin-top: 1.5rem; }
+    .history-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: .5rem; }
+    .history-head span { color: var(--muted); font-size: .78rem; text-transform: uppercase; letter-spacing: .04em; }
+    .history-head button { background: none; border: 0; color: var(--muted); font-size: .8rem; cursor: pointer; padding: 0; text-decoration: underline; }
+    .history-head button:hover { color: var(--text); }
+    .history-list { list-style: none; display: flex; flex-direction: column; gap: .4rem; }
+    .history-item { display: flex; align-items: stretch; gap: .4rem; }
+    .history-load { flex: 1; display: flex; align-items: center; gap: .6rem; min-width: 0; padding: .55rem .8rem; border: 1px solid var(--border); border-radius: 10px; background: var(--card); color: var(--text); font: inherit; text-align: left; cursor: pointer; }
+    .history-load:hover, .history-load:focus-visible { border-color: var(--accent); background: var(--chip-hover); }
+    .history-load .dot { width: 8px; height: 8px; flex: 0 0 auto; border-radius: 50%; background: var(--muted); }
+    .history-load .dot.approved { background: var(--ok); }
+    .history-load .dot.needs_review { background: var(--warn); }
+    .history-load .job { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: .85rem; }
+    .history-load .when { flex: 0 0 auto; color: var(--muted); font-size: .75rem; }
+    .history-load .amt { flex: 0 0 auto; font-weight: 600; font-size: .85rem; font-variant-numeric: tabular-nums; }
+    .history-rm { flex: 0 0 auto; width: 34px; border: 1px solid var(--border); border-radius: 10px; background: var(--card); color: var(--muted); font-size: 1rem; line-height: 1; cursor: pointer; }
+    .history-rm:hover { border-color: var(--warn); color: var(--warn); }
+    .quote-actions { display: flex; gap: .5rem; justify-content: flex-end; margin-top: .75rem; }
+    .quote-action-btn { margin-top: 0; padding: .5rem 1rem; font-size: .85rem; font-weight: 600; background: transparent; border: 1px solid var(--border); color: var(--text); border-radius: 8px; cursor: pointer; }
+    .quote-action-btn:hover { border-color: var(--accent); color: var(--accent); background: var(--chip-hover); }
+    @media print {
+      #theme, .chips, .chips-label, .sub, textarea, #code, #go, .history, .add-line-wrap, .quote-actions, .custom-row .rm-line { display: none !important; }
+      body { padding: 0; background: #fff; color: #000; }
+      main { max-width: 100%; }
+      .quote { margin-top: 0; }
+      table, th, td { border-color: #ccc !important; }
+      .cite { color: #555; }
+    }
+  </style>
+</head>
+<body>
+  <button id="theme" title="Toggle light/dark">☀️</button>
+  <main>
+    <h1>QuoteKit</h1>
+    <p class="sub">Describe the job. Every price is retrieved from your indexed price list — never invented — and gated by a groundedness check.</p>
+
+    <div class="chips" id="chips">
+      <span class="chips-label">Try one:</span>
+    </div>
+    <textarea id="job" placeholder="Describe the job in your own words…"></textarea>
+    <input id="code" type="password" placeholder="Access code (optional — without it you get sample demo data)"
+           style="width:100%;margin-top:.5rem;padding:.6rem .8rem;border-radius:10px;border:1px solid var(--border);background:var(--card);color:var(--text);font-size:.9rem;" />
+    <button id="go">Generate quote</button>
+
+    <section class="history" id="history" hidden>
+      <div class="history-head">
+        <span>Recent quotes</span>
+        <button type="button" id="historyClear">Clear</button>
+      </div>
+      <ul class="history-list" id="historyList"></ul>
+    </section>
+
+    <div class="quote" id="result" hidden>
+      <span class="badge" id="status"></span>
+      <table>
+        <thead><tr><th>Item</th><th class="num">Qty</th><th class="num">Unit</th><th class="num">Total</th></tr></thead>
+        <tbody id="items"></tbody>
+      </table>
+      <div class="add-line-wrap">
+        <button type="button" id="addLine" class="add-line-btn">+ Add line item</button>
+      </div>
+      <p class="subtotal" id="subtotal"></p>
+      <div class="quote-actions">
+        <button type="button" id="printQuote" class="quote-action-btn">🖨️ Print</button>
+        <button type="button" id="exportCsv" class="quote-action-btn">⬇ CSV</button>
+      </div>
+      <p class="meta" id="meta"></p>
+    </div>
+  </main>
+
+  <script>
+    // Theme: user choice persists; first visit follows the OS preference.
+    // Storage access is wrapped — some browsers/sandboxes throw on it.
+    const store = {
+      get(k) { try { return localStorage.getItem(k); } catch { return null; } },
+      set(k, v) { try { localStorage.setItem(k, v); } catch { /* ignore */ } },
+    };
+    const themeBtn = document.getElementById("theme");
+    function setTheme(t) {
+      document.documentElement.dataset.theme = t;
+      themeBtn.textContent = t === "light" ? "🌙" : "☀️";
+      store.set("qk-theme", t);
+    }
+    setTheme(store.get("qk-theme") ||
+      (matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark"));
+    themeBtn.addEventListener("click", () =>
+      setTheme(document.documentElement.dataset.theme === "light" ? "dark" : "light"));
+
+    const API = window.QUOTEKIT_API || (
+      ["localhost", "127.0.0.1", ""].includes(location.hostname)
+        ? "http://localhost:8000"
+        : "https://quotekit-api-gtpvdikyux43s.livelymeadow-6c9ebf07.eastus2.azurecontainerapps.io"
+    );
+    const btn = document.getElementById("go");
+
+    const SUGGESTIONS = [
+      "Rebuild a 200 sq ft deck with pressure-treated lumber and two sets of stairs",
+      "Install 40 linear ft of cedar fence, 6 ft tall, with one gate",
+      "Paint two bedrooms, walls and ceiling, about 400 sq ft total",
+      "Replace 3 interior doors including handles",
+      "Hang and finish drywall in a 300 sq ft basement room with baseboard trim",
+    ];
+    const chipsEl = document.getElementById("chips");
+    SUGGESTIONS.forEach(text => {
+      const chip = document.createElement("button");
+      chip.className = "chip";
+      chip.type = "button";
+      chip.textContent = text.length > 52 ? text.slice(0, 50) + "…" : text;
+      chip.title = text;
+      chip.addEventListener("click", () => {
+        document.getElementById("job").value = text;
+        generate();
+      });
+      chipsEl.appendChild(chip);
+    });
+
+    btn.addEventListener("click", generate);
+
+    async function generate() {
+      const job = document.getElementById("job").value.trim();
+      if (job.length < 10) return alert("Add a bit more detail about the job.");
+      btn.disabled = true; btn.textContent = "Retrieving + evaluating…";
+      document.querySelectorAll(".chip").forEach(c => c.disabled = true);
+      try {
+        const headers = { "Content-Type": "application/json" };
+        const code = document.getElementById("code").value.trim();
+        if (code) headers["X-Access-Code"] = code;
+        const res = await fetch(API + "/quote", {
+          method: "POST",
+          headers,
+          body: JSON.stringify({ job_description: job }),
+        });
+        if (!res.ok) throw new Error(await res.text());
+        const data = await res.json();
+        render(data);
+        addToHistory(job, data);
+      } catch (e) {
+        alert("Request failed: " + e.message);
+      } finally {
+        btn.disabled = false; btn.textContent = "Generate quote";
+        document.querySelectorAll(".chip").forEach(c => c.disabled = false);
+      }
+    }
+
+    // Quote history: last few generated quotes, kept in localStorage so a
+    // visitor can revisit them (no re-query) across reloads of the same browser.
+    const HISTORY_KEY = "qk-history";
+    const MAX_HISTORY = 12;
+
+    function loadHistory() {
+      try { return JSON.parse(store.get(HISTORY_KEY) || "[]"); } catch { return []; }
+    }
+    function saveHistory(items) { store.set(HISTORY_KEY, JSON.stringify(items)); }
+
+    function escapeHtml(s) {
+      return s.replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+    }
+
+    function formatWhen(ts) {
+      const min = Math.round((Date.now() - ts) / 60000);
+      if (min < 1) return "just now";
+      if (min < 60) return min + "m ago";
+      const hr = Math.round(min / 60);
+      if (hr < 24) return hr + "h ago";
+      const days = Math.round(hr / 24);
+      if (days < 7) return days + "d ago";
+      return new Date(ts).toLocaleDateString(undefined, { month: "short", day: "numeric" });
+    }
+
+    function addToHistory(job, quote) {
+      const items = loadHistory();
+      items.unshift({
+        id: crypto.randomUUID ? crypto.randomUUID() : Date.now() + "-" + Math.random().toString(36).slice(2),
+        job,
+        ts: Date.now(),
+        quote,
+      });
+      saveHistory(items.slice(0, MAX_HISTORY));
+      renderHistory();
+    }
+
+    function renderHistory() {
+      const items = loadHistory();
+      document.getElementById("history").hidden = items.length === 0;
+      document.getElementById("historyList").innerHTML = items.map(entry => `
+        <li class="history-item">
+          <button type="button" class="history-load" data-id="${entry.id}" title="${escapeHtml(entry.job)}">
+            <span class="dot ${entry.quote.status}"></span>
+            <span class="job">${escapeHtml(entry.job)}</span>
+            <span class="when">${formatWhen(entry.ts)}</span>
+            <span class="amt">$${entry.quote.subtotal.toFixed(2)}</span>
+          </button>
+          <button type="button" class="history-rm" data-id="${entry.id}" aria-label="Remove from history">×</button>
+        </li>`).join("");
+    }
+
+    document.getElementById("historyList").addEventListener("click", (e) => {
+      const rm = e.target.closest(".history-rm");
+      if (rm) {
+        saveHistory(loadHistory().filter(x => x.id !== rm.dataset.id));
+        renderHistory();
+        return;
+      }
+      const load = e.target.closest(".history-load");
+      if (load) {
+        const entry = loadHistory().find(x => x.id === load.dataset.id);
+        if (!entry) return;
+        document.getElementById("job").value = entry.job;
+        render(entry.quote);
+        document.getElementById("result").scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+    });
+
+    document.getElementById("historyClear").addEventListener("click", () => {
+      saveHistory([]);
+      renderHistory();
+    });
+
+    renderHistory();
+
+    // Custom line items: lets a contractor add ad-hoc rows (delivery fee,
+    // rounding, extra labor) on top of the grounded, retrieved items.
+    // Not persisted — scoped to the currently displayed quote.
+    let lastQuote = null;
+    let customLines = [];
+
+    function computeCustomTotal() {
+      return customLines.reduce((sum, l) => sum + (Number(l.qty) || 0) * (Number(l.price) || 0), 0);
+    }
+
+    function updateSubtotalDisplay() {
+      if (!lastQuote) return;
+      const total = lastQuote.subtotal + computeCustomTotal();
+      document.getElementById("subtotal").textContent = "Subtotal: $" + total.toFixed(2);
+    }
+
+    function renderCustomRows() {
+      const tbody = document.getElementById("items");
+      tbody.querySelectorAll("tr.custom-row").forEach(r => r.remove());
+      customLines.forEach(line => {
+        const tr = document.createElement("tr");
+        tr.className = "custom-row";
+        tr.dataset.id = line.id;
+        const total = (Number(line.qty) || 0) * (Number(line.price) || 0);
+        tr.innerHTML = `
+          <td><input type="text" class="cl-desc" placeholder="Custom item…" value="${escapeHtml(line.desc)}" /></td>
+          <td class="num"><input type="number" class="cl-qty" min="0" step="1" value="${line.qty}" /></td>
+          <td class="num"><input type="number" class="cl-price" min="0" step="0.01" value="${line.price}" /></td>
+          <td class="num line-total">$${total.toFixed(2)} <button type="button" class="rm-line" aria-label="Remove line">×</button></td>`;
+        tbody.appendChild(tr);
+      });
+    }
+
+    document.getElementById("items").addEventListener("input", (e) => {
+      const tr = e.target.closest("tr.custom-row");
+      if (!tr) return;
+      const line = customLines.find(l => l.id === tr.dataset.id);
+      if (!line) return;
+      if (e.target.classList.contains("cl-desc")) line.desc = e.target.value;
+      if (e.target.classList.contains("cl-qty")) line.qty = e.target.value;
+      if (e.target.classList.contains("cl-price")) line.price = e.target.value;
+      const total = (Number(line.qty) || 0) * (Number(line.price) || 0);
+      tr.querySelector(".line-total").firstChild.textContent = "$" + total.toFixed(2) + " ";
+      updateSubtotalDisplay();
+    });
+
+    document.getElementById("items").addEventListener("click", (e) => {
+      const rm = e.target.closest(".rm-line");
+      if (!rm) return;
+      const tr = e.target.closest("tr.custom-row");
+      customLines = customLines.filter(l => l.id !== tr.dataset.id);
+      renderCustomRows();
+      updateSubtotalDisplay();
+    });
+
+    document.getElementById("addLine").addEventListener("click", () => {
+      if (!lastQuote) return;
+      customLines.push({
+        id: crypto.randomUUID ? crypto.randomUUID() : Date.now() + "-" + Math.random().toString(36).slice(2),
+        desc: "", qty: 1, price: 0,
+      });
+      renderCustomRows();
+      updateSubtotalDisplay();
+    });
+
+    // Print / CSV export: lets a contractor hand the quote to a customer
+    // without re-typing it — a print-friendly view (browser "Save as PDF"
+    // covers the PDF case) and a CSV including any custom line items.
+    function csvEscape(v) {
+      const s = String(v ?? "");
+      return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+    }
+
+    function quoteToCsv() {
+      const rows = [["Description", "Qty", "Unit", "Unit price", "Total", "Source"]];
+      lastQuote.line_items.forEach(li => {
+        rows.push([li.description, li.quantity, li.unit, li.unit_price.toFixed(2), li.total.toFixed(2), li.citation?.document || ""]);
+      });
+      customLines.forEach(l => {
+        const total = (Number(l.qty) || 0) * (Number(l.price) || 0);
+        rows.push([l.desc || "Custom item", l.qty, "", (Number(l.price) || 0).toFixed(2), total.toFixed(2), ""]);
+      });
+      rows.push(["", "", "", "Subtotal", (lastQuote.subtotal + computeCustomTotal()).toFixed(2), ""]);
+      return rows.map(r => r.map(csvEscape).join(",")).join("\n");
+    }
+
+    document.getElementById("printQuote").addEventListener("click", () => window.print());
+
+    document.getElementById("exportCsv").addEventListener("click", () => {
+      if (!lastQuote) return;
+      const blob = new Blob([quoteToCsv()], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "quotekit-quote-" + Date.now() + ".csv";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    });
+
+    function render(q) {
+      const el = document.getElementById("result");
+      el.hidden = false;
+      lastQuote = q;
+      customLines = [];
+      const badge = document.getElementById("status");
+      badge.className = "badge " + q.status;
+      badge.textContent = q.status === "approved" ? "✓ Passed eval gate" : "⚠ Needs human review";
+
+      document.getElementById("items").innerHTML = q.line_items.map(li => `
+        <tr>
+          <td>${li.description}<div class="cite">source: ${li.citation.document} — “${li.citation.snippet}”</div></td>
+          <td class="num">${li.quantity} ${li.unit}</td>
+          <td class="num">$${li.unit_price.toFixed(2)}</td>
+          <td class="num">$${li.total.toFixed(2)}</td>
+        </tr>`).join("");
+      renderCustomRows();
+      updateSubtotalDisplay();
+
+      document.getElementById("meta").textContent =
+        (q.mode === "demo" ? "Sample data (demo mode — enter an access code for live AI) · " : "") +
+        `Groundedness: ${q.groundedness_score ?? "n/a"}` +
+        (q.review_reasons.length ? " · Review reasons: " + q.review_reasons.join("; ") : "");
+    }
+  </script>
+</body>
+</html>
