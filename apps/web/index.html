@@ -66,6 +66,23 @@
     .history-load .amt { flex: 0 0 auto; font-weight: 600; font-size: .85rem; font-variant-numeric: tabular-nums; }
     .history-rm { flex: 0 0 auto; width: 34px; border: 1px solid var(--border); border-radius: 10px; background: var(--card); color: var(--muted); font-size: 1rem; line-height: 1; cursor: pointer; }
     .history-rm:hover { border-color: var(--warn); color: var(--warn); }
+    .quote-actions { margin-top: 1.25rem; display: flex; justify-content: flex-end; }
+    .print-btn { margin-top: 0; padding: .55rem 1.2rem; font-size: .85rem; background: transparent; border: 1px solid var(--border); color: var(--text); border-radius: 8px; }
+    .print-btn:hover { border-color: var(--accent); color: var(--accent); }
+    .print-header { display: none; }
+
+    @media print {
+      body { padding: 0; background: #fff; color: #000; }
+      #theme, .chips, #job, #code, #go, .history, .add-line-wrap, .rm-line, .quote-actions { display: none !important; }
+      main { max-width: none; }
+      .print-header { display: block; margin-bottom: 1.25rem; }
+      .print-header h1 { font-size: 1.4rem; }
+      .print-header .job-desc { margin-top: .4rem; font-size: .95rem; }
+      .print-header .print-date { color: #555; font-size: .8rem; margin-top: .15rem; }
+      table { font-size: .85rem; }
+      .cite { color: #555; }
+      .custom-row input { border: 0; background: none; color: #000; pointer-events: none; }
+    }
   </style>
 </head>
 <body>
@@ -91,6 +108,11 @@
     </section>
 
     <div class="quote" id="result" hidden>
+      <div class="print-header">
+        <h1>QuoteKit — Quote</h1>
+        <p class="job-desc" id="printJob"></p>
+        <p class="print-date" id="printDate"></p>
+      </div>
       <span class="badge" id="status"></span>
       <table>
         <thead><tr><th>Item</th><th class="num">Qty</th><th class="num">Unit</th><th class="num">Total</th></tr></thead>
@@ -101,6 +123,9 @@
       </div>
       <p class="subtotal" id="subtotal"></p>
       <p class="meta" id="meta"></p>
+      <div class="quote-actions">
+        <button type="button" id="printQuote" class="print-btn">🖨️ Print / Save as PDF</button>
+      </div>
     </div>
   </main>
 
@@ -168,7 +193,7 @@
         });
         if (!res.ok) throw new Error(await res.text());
         const data = await res.json();
-        render(data);
+        render(data, job);
         addToHistory(job, data);
       } catch (e) {
         alert("Request failed: " + e.message);
@@ -242,7 +267,7 @@
         const entry = loadHistory().find(x => x.id === load.dataset.id);
         if (!entry) return;
         document.getElementById("job").value = entry.job;
-        render(entry.quote);
+        render(entry.quote, entry.job);
         document.getElementById("result").scrollIntoView({ behavior: "smooth", block: "start" });
       }
     });
@@ -319,11 +344,16 @@
       updateSubtotalDisplay();
     });
 
-    function render(q) {
+    document.getElementById("printQuote").addEventListener("click", () => window.print());
+
+    function render(q, job) {
       const el = document.getElementById("result");
       el.hidden = false;
       lastQuote = q;
       customLines = [];
+      document.getElementById("printJob").textContent = job || document.getElementById("job").value.trim();
+      document.getElementById("printDate").textContent =
+        "Prepared " + new Date().toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" });
       const badge = document.getElementById("status");
       badge.className = "badge " + q.status;
       badge.textContent = q.status === "approved" ? "✓ Passed eval gate" : "⚠ Needs human review";
