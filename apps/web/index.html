@@ -39,6 +39,10 @@
     td.num { text-align: right; font-variant-numeric: tabular-nums; }
     .cite { color: var(--muted); font-size: .78rem; margin-top: .15rem; }
     .subtotal { text-align: right; margin-top: 1rem; font-size: 1.15rem; font-weight: 700; }
+    .subtotal .sub-line { display: block; font-size: .85rem; font-weight: 500; color: var(--muted); }
+    .markup-row { display: flex; align-items: center; justify-content: flex-end; gap: .5rem; margin-top: 1rem; }
+    .markup-row label { color: var(--muted); font-size: .85rem; }
+    .markup-row input { width: 70px; padding: .35rem .5rem; border: 1px solid var(--border); border-radius: 8px; background: var(--card); color: var(--text); font-size: .9rem; text-align: right; font-variant-numeric: tabular-nums; }
     .meta { color: var(--muted); font-size: .85rem; margin-top: .5rem; }
     .add-line-wrap { margin-top: .75rem; text-align: right; }
     .add-line-btn { margin-top: 0; padding: .5rem 1rem; font-size: .85rem; font-weight: 600; background: transparent; border: 1px dashed var(--border); color: var(--muted); border-radius: 8px; cursor: pointer; }
@@ -98,6 +102,11 @@
       </table>
       <div class="add-line-wrap">
         <button type="button" id="addLine" class="add-line-btn">+ Add line item</button>
+      </div>
+      <div class="markup-row">
+        <label for="markupPct">Markup / tax</label>
+        <input type="number" id="markupPct" min="0" step="0.5" value="0" />
+        <span>%</span>
       </div>
       <p class="subtotal" id="subtotal"></p>
       <p class="meta" id="meta"></p>
@@ -264,10 +273,31 @@
       return customLines.reduce((sum, l) => sum + (Number(l.qty) || 0) * (Number(l.price) || 0), 0);
     }
 
+    // Markup / tax: an optional percentage a contractor can layer on top of
+    // the grounded subtotal (overhead, profit margin, sales tax). The last
+    // value used is remembered per browser so it carries over between quotes.
+    const MARKUP_KEY = "qk-markup";
+    const markupInput = document.getElementById("markupPct");
+    markupInput.value = store.get(MARKUP_KEY) || 0;
+    markupInput.addEventListener("input", () => {
+      store.set(MARKUP_KEY, markupInput.value);
+      updateSubtotalDisplay();
+    });
+
     function updateSubtotalDisplay() {
       if (!lastQuote) return;
-      const total = lastQuote.subtotal + computeCustomTotal();
-      document.getElementById("subtotal").textContent = "Subtotal: $" + total.toFixed(2);
+      const base = lastQuote.subtotal + computeCustomTotal();
+      const pct = Number(markupInput.value) || 0;
+      const subtotalEl = document.getElementById("subtotal");
+      if (pct) {
+        const markupAmt = base * (pct / 100);
+        subtotalEl.innerHTML =
+          `<span class="sub-line">Subtotal: $${base.toFixed(2)}</span>` +
+          `<span class="sub-line">Markup (${pct}%): $${markupAmt.toFixed(2)}</span>` +
+          `Total: $${(base + markupAmt).toFixed(2)}`;
+      } else {
+        subtotalEl.textContent = "Subtotal: $" + base.toFixed(2);
+      }
     }
 
     function renderCustomRows() {
@@ -324,6 +354,7 @@
       el.hidden = false;
       lastQuote = q;
       customLines = [];
+      markupInput.value = store.get(MARKUP_KEY) || 0;
       const badge = document.getElementById("status");
       badge.className = "badge " + q.status;
       badge.textContent = q.status === "approved" ? "✓ Passed eval gate" : "⚠ Needs human review";
