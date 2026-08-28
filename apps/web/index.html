@@ -29,6 +29,8 @@
     .chip:hover { border-color: var(--accent); background: var(--chip-hover); }
     .chip:disabled { opacity: .5; cursor: wait; }
     .chips-label { width: 100%; color: var(--muted); font-size: .8rem; margin-bottom: .1rem; }
+    .hint { color: var(--muted); font-size: .78rem; margin-top: .4rem; }
+    .hint kbd { display: inline-block; padding: .05rem .35rem; border-radius: 4px; border: 1px solid var(--border); background: var(--card); font-family: inherit; font-size: .75rem; }
     .quote { margin-top: 2rem; }
     .badge { display: inline-block; padding: .2rem .7rem; border-radius: 999px; font-size: .8rem; font-weight: 600; }
     .badge.approved { background: color-mix(in srgb, var(--ok) 15%, transparent); color: var(--ok); }
@@ -78,6 +80,7 @@
       <span class="chips-label">Try one:</span>
     </div>
     <textarea id="job" placeholder="Describe the job in your own words…"></textarea>
+    <p class="hint">Tip: press <kbd>⌘</kbd>/<kbd>Ctrl</kbd> + <kbd>Enter</kbd> to generate</p>
     <input id="code" type="password" placeholder="Access code (optional — without it you get sample demo data)"
            style="width:100%;margin-top:.5rem;padding:.6rem .8rem;border-radius:10px;border:1px solid var(--border);background:var(--card);color:var(--text);font-size:.9rem;" />
     <button id="go">Generate quote</button>
@@ -151,6 +154,15 @@
     });
 
     btn.addEventListener("click", generate);
+
+    // Ctrl/Cmd+Enter from the job textarea submits, matching the convention
+    // used by chat inputs — saves a reach for the mouse when iterating.
+    document.getElementById("job").addEventListener("keydown", (e) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
+        e.preventDefault();
+        if (!btn.disabled) generate();
+      }
+    });
 
     async function generate() {
       const job = document.getElementById("job").value.trim();
