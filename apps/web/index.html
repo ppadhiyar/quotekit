@@ -49,6 +49,9 @@
     .custom-row .line-total { white-space: nowrap; }
     .custom-row .rm-line { margin-top: 0; padding: 0 .35rem; border: 0; background: none; color: var(--muted); font-size: 1rem; line-height: 1; cursor: pointer; }
     .custom-row .rm-line:hover { color: var(--warn); }
+    .qty-edit { display: inline-flex; align-items: center; gap: .3rem; justify-content: flex-end; }
+    .qty-edit input[type="number"] { width: 4.2rem; border: 1px solid var(--border); background: var(--bg); color: var(--text); border-radius: 6px; padding: .3rem .4rem; font-size: .88rem; text-align: right; font-variant-numeric: tabular-nums; }
+    .qty-edit .unit { color: var(--muted); font-size: .82rem; }
     .history { margin-top: 1.5rem; }
     .history-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: .5rem; }
     .history-head span { color: var(--muted); font-size: .78rem; text-transform: uppercase; letter-spacing: .04em; }
@@ -264,9 +267,17 @@
       return customLines.reduce((sum, l) => sum + (Number(l.qty) || 0) * (Number(l.price) || 0), 0);
     }
 
+    // Retrieved items keep their AI-quoted price, but a contractor can adjust
+    // quantity (e.g. the job needs more/less material than estimated) —
+    // recomputed client-side only, never sent back to re-evaluate the quote.
+    function computeRetrievedTotal() {
+      if (!lastQuote) return 0;
+      return lastQuote.line_items.reduce((sum, li) => sum + li.total, 0);
+    }
+
     function updateSubtotalDisplay() {
       if (!lastQuote) return;
-      const total = lastQuote.subtotal + computeCustomTotal();
+      const total = computeRetrievedTotal() + computeCustomTotal();
       document.getElementById("subtotal").textContent = "Subtotal: $" + total.toFixed(2);
     }
 
@@ -288,6 +299,17 @@
     }
 
     document.getElementById("items").addEventListener("input", (e) => {
+      if (e.target.classList.contains("li-qty")) {
+        const tr = e.target.closest("tr[data-idx]");
+        if (!tr || !lastQuote) return;
+        const li = lastQuote.line_items[Number(tr.dataset.idx)];
+        if (!li) return;
+        li.quantity = Number(e.target.value) || 0;
+        li.total = li.quantity * li.unit_price;
+        tr.querySelector(".li-total").textContent = "$" + li.total.toFixed(2);
+        updateSubtotalDisplay();
+        return;
+      }
       const tr = e.target.closest("tr.custom-row");
       if (!tr) return;
       const line = customLines.find(l => l.id === tr.dataset.id);
@@ -328,12 +350,17 @@
       badge.className = "badge " + q.status;
       badge.textContent = q.status === "approved" ? "✓ Passed eval gate" : "⚠ Needs human review";
 
-      document.getElementById("items").innerHTML = q.line_items.map(li => `
-        <tr>
+      document.getElementById("items").innerHTML = q.line_items.map((li, idx) => `
+        <tr data-idx="${idx}">
           <td>${li.description}<div class="cite">source: ${li.citation.document} — “${li.citation.snippet}”</div></td>
-          <td class="num">${li.quantity} ${li.unit}</td>
+          <td class="num">
+            <span class="qty-edit">
+              <input type="number" class="li-qty" min="0" step="any" value="${li.quantity}" aria-label="Quantity for ${escapeHtml(li.description)}" />
+              <span class="unit">${li.unit}</span>
+            </span>
+          </td>
           <td class="num">$${li.unit_price.toFixed(2)}</td>
-          <td class="num">$${li.total.toFixed(2)}</td>
+          <td class="num li-total">$${li.total.toFixed(2)}</td>
         </tr>`).join("");
       renderCustomRows();
       updateSubtotalDisplay();
