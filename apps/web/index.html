@@ -54,6 +54,9 @@
     .history-head span { color: var(--muted); font-size: .78rem; text-transform: uppercase; letter-spacing: .04em; }
     .history-head button { background: none; border: 0; color: var(--muted); font-size: .8rem; cursor: pointer; padding: 0; text-decoration: underline; }
     .history-head button:hover { color: var(--text); }
+    .history-search { width: 100%; margin-bottom: .5rem; padding: .5rem .7rem; border-radius: 8px; border: 1px solid var(--border); background: var(--card); color: var(--text); font-size: .85rem; }
+    .history-search:focus { outline: none; border-color: var(--accent); }
+    .history-empty { color: var(--muted); font-size: .82rem; padding: .5rem 0; }
     .history-list { list-style: none; display: flex; flex-direction: column; gap: .4rem; }
     .history-item { display: flex; align-items: stretch; gap: .4rem; }
     .history-load { flex: 1; display: flex; align-items: center; gap: .6rem; min-width: 0; padding: .55rem .8rem; border: 1px solid var(--border); border-radius: 10px; background: var(--card); color: var(--text); font: inherit; text-align: left; cursor: pointer; }
@@ -87,6 +90,7 @@
         <span>Recent quotes</span>
         <button type="button" id="historyClear">Clear</button>
       </div>
+      <input type="search" id="historySearch" class="history-search" placeholder="Search history by job description…" aria-label="Search quote history" />
       <ul class="history-list" id="historyList"></ul>
     </section>
 
@@ -217,8 +221,20 @@
 
     function renderHistory() {
       const items = loadHistory();
+      const searchEl = document.getElementById("historySearch");
       document.getElementById("history").hidden = items.length === 0;
-      document.getElementById("historyList").innerHTML = items.map(entry => `
+      searchEl.hidden = items.length === 0;
+
+      const term = searchEl.value.trim().toLowerCase();
+      const filtered = term ? items.filter(entry => entry.job.toLowerCase().includes(term)) : items;
+
+      document.getElementById("historyEmpty")?.remove();
+      if (items.length > 0 && filtered.length === 0) {
+        document.getElementById("historyList").insertAdjacentHTML("afterend",
+          `<p class="history-empty" id="historyEmpty">No quotes match "${escapeHtml(searchEl.value.trim())}".</p>`);
+      }
+
+      document.getElementById("historyList").innerHTML = filtered.map(entry => `
         <li class="history-item">
           <button type="button" class="history-load" data-id="${entry.id}" title="${escapeHtml(entry.job)}">
             <span class="dot ${entry.quote.status}"></span>
@@ -229,6 +245,8 @@
           <button type="button" class="history-rm" data-id="${entry.id}" aria-label="Remove from history">×</button>
         </li>`).join("");
     }
+
+    document.getElementById("historySearch").addEventListener("input", renderHistory);
 
     document.getElementById("historyList").addEventListener("click", (e) => {
       const rm = e.target.closest(".history-rm");
