@@ -66,6 +66,11 @@
     .history-load .amt { flex: 0 0 auto; font-weight: 600; font-size: .85rem; font-variant-numeric: tabular-nums; }
     .history-rm { flex: 0 0 auto; width: 34px; border: 1px solid var(--border); border-radius: 10px; background: var(--card); color: var(--muted); font-size: 1rem; line-height: 1; cursor: pointer; }
     .history-rm:hover { border-color: var(--warn); color: var(--warn); }
+    .totals { margin-top: 1rem; border-top: 1px solid var(--border); padding-top: .6rem; }
+    .totals-row { display: flex; justify-content: space-between; align-items: center; padding: .3rem 0; font-size: .92rem; color: var(--muted); }
+    .totals-row.grand { font-size: 1.15rem; font-weight: 700; color: var(--text); border-top: 1px solid var(--border); margin-top: .2rem; padding-top: .6rem; }
+    .tax-row label { display: flex; align-items: center; gap: .4rem; }
+    .tax-row input[type="number"] { width: 4rem; padding: .3rem .4rem; border-radius: 6px; border: 1px solid var(--border); background: var(--card); color: var(--text); font-size: .88rem; text-align: right; }
   </style>
 </head>
 <body>
@@ -99,7 +104,20 @@
       <div class="add-line-wrap">
         <button type="button" id="addLine" class="add-line-btn">+ Add line item</button>
       </div>
-      <p class="subtotal" id="subtotal"></p>
+      <div class="totals">
+        <div class="totals-row">
+          <span>Subtotal</span>
+          <span id="subtotal">$0.00</span>
+        </div>
+        <div class="totals-row tax-row">
+          <label for="taxRate">Tax <input type="number" id="taxRate" min="0" max="100" step="0.1" value="0" />%</label>
+          <span id="taxAmount">$0.00</span>
+        </div>
+        <div class="totals-row grand">
+          <span>Total</span>
+          <span id="grandTotal">$0.00</span>
+        </div>
+      </div>
       <p class="meta" id="meta"></p>
     </div>
   </main>
@@ -264,10 +282,24 @@
       return customLines.reduce((sum, l) => sum + (Number(l.qty) || 0) * (Number(l.price) || 0), 0);
     }
 
+    // Tax rate: a per-visitor preference (not per-quote), so it stays put
+    // across quotes and reloads while a contractor works through several jobs.
+    const taxRateInput = document.getElementById("taxRate");
+    taxRateInput.value = store.get("qk-tax-rate") || "0";
+    taxRateInput.addEventListener("input", () => {
+      const rate = Math.max(0, Number(taxRateInput.value) || 0);
+      store.set("qk-tax-rate", String(rate));
+      updateSubtotalDisplay();
+    });
+
     function updateSubtotalDisplay() {
       if (!lastQuote) return;
-      const total = lastQuote.subtotal + computeCustomTotal();
-      document.getElementById("subtotal").textContent = "Subtotal: $" + total.toFixed(2);
+      const subtotal = lastQuote.subtotal + computeCustomTotal();
+      const taxRate = Math.max(0, Number(taxRateInput.value) || 0);
+      const taxAmount = subtotal * (taxRate / 100);
+      document.getElementById("subtotal").textContent = "$" + subtotal.toFixed(2);
+      document.getElementById("taxAmount").textContent = "$" + taxAmount.toFixed(2);
+      document.getElementById("grandTotal").textContent = "$" + (subtotal + taxAmount).toFixed(2);
     }
 
     function renderCustomRows() {
